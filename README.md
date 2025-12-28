@@ -9,6 +9,7 @@ Adversarial_examples/
 ├── main.py                    # Main entry point
 ├── config.py                  # Configuration settings
 ├── requirements.txt           # Python dependencies
+├── download_data.sh           # Downloads EuroSat dataset
 ├── README.md                  # This file
 ├── data/                      # EuroSat dataset (2 versions)
 │   ├── EuroSAT_RGB/           # RGB version (we use this one)
@@ -46,7 +47,7 @@ Adversarial_examples/
 ### 1. Load datasets
 ```bash
 # Download data to workspace (change the workspace if you do not use sspcloud)
-bash sh_scripts/download_data.sh
+bash download_data.sh
 ```
 
 ### 2. Prepare Dataset
