@@ -7,7 +7,8 @@ import torch
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # Dataset configuration
-DATA_PATH = 'data/EuroSAT_RGB'
+DATA_PATH_TRAIN = 'datasets/EuroSAT_RGB/train_clean'
+DATA_PATH_EVAL = 'datasets/EuroSAT_RGB/test_clean'
 NUM_CLASSES = 10
 IMG_SIZE = 64  # Resize images to 64x64 for faster training
 
@@ -15,7 +16,7 @@ IMG_SIZE = 64  # Resize images to 64x64 for faster training
 BATCH_SIZE = 32
 EPOCHS = 15
 LEARNING_RATE = 0.001
-TRAIN_TEST_SPLIT = 0.8
+PATIENCE = int(EPOCHS / 5)
 SEED = 42  # For reproducibility
 
 # Model configuration

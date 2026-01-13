@@ -13,12 +13,12 @@ import os
 import seaborn as sns
 from sklearn.metrics import confusion_matrix, classification_report
 
-from config import SAVE_PLOTS_PATH, MEAN, STD
+from config import MEAN, STD
 
 
-def plot_training_history(history, model_name="Model"):
+def plot_training_history(history, model_name="Model", save_plots_path):
     """Plot training and validation metrics and save to file"""
-    os.makedirs(SAVE_PLOTS_PATH, exist_ok=True)
+    os.makedirs(save_plots_path, exist_ok=True)
     
     fig, axes = plt.subplots(1, 3, figsize=(18, 5))
     
@@ -65,18 +65,18 @@ def plot_training_history(history, model_name="Model"):
     plt.tight_layout()
     
     # Save the figure
-    filename = os.path.join(SAVE_PLOTS_PATH, f'{model_name}_training_history.png')
+    filename = os.path.join(save_plots_path, f'{model_name}_training_history.png')
     plt.savefig(filename, dpi=150, bbox_inches='tight')
     print(f"Training history plot saved to: {filename}")
     
     # Also save as PDF for better quality
-    pdf_filename = os.path.join(SAVE_PLOTS_PATH, f'{model_name}_training_history.pdf')
+    pdf_filename = os.path.join(save_plots_path, f'{model_name}_training_history.pdf')
     plt.savefig(pdf_filename, bbox_inches='tight')
     
     plt.close(fig)  # Close the figure to free memory
 
 
-def visualize_predictions(model, data_loader, class_names, device, num_samples=16, save=True):
+def visualize_predictions(model, data_loader, class_names, device, num_samples=16, save=True, save_plots_path):
     """Visualize model predictions on sample images and save to file"""
     model.eval()
     
@@ -137,12 +137,12 @@ def visualize_predictions(model, data_loader, class_names, device, num_samples=1
     plt.tight_layout()
     
     if save:
-        filename = os.path.join(SAVE_PLOTS_PATH, 'sample_predictions.png')
+        filename = os.path.join(save_plots_path, 'sample_predictions.png')
         plt.savefig(filename, dpi=150, bbox_inches='tight')
         print(f"Predictions visualization saved to: {filename}")
         
         # Also save as PDF
-        pdf_filename = os.path.join(SAVE_PLOTS_PATH, 'sample_predictions.pdf')
+        pdf_filename = os.path.join(save_plots_path, 'sample_predictions.pdf')
         plt.savefig(pdf_filename, bbox_inches='tight')
     
     plt.close(fig)
@@ -165,9 +165,9 @@ def denormalize(tensor):
     return torch.clamp(tensor, 0, 1)
 
 
-def plot_confusion_matrix(y_true, y_pred, class_names, normalize=True):
+def plot_confusion_matrix(y_true, y_pred, class_names, normalize=True, save_plots_path):
     """Plot confusion matrix and save to file"""
-    os.makedirs(SAVE_PLOTS_PATH, exist_ok=True)
+    os.makedirs(save_plots_path, exist_ok=True)
     
     cm = confusion_matrix(y_true, y_pred)
     
@@ -200,12 +200,12 @@ def plot_confusion_matrix(y_true, y_pred, class_names, normalize=True):
     
     # Save the figure
     norm_suffix = '_normalized' if normalize else ''
-    filename = os.path.join(SAVE_PLOTS_PATH, f'confusion_matrix{norm_suffix}.png')
+    filename = os.path.join(save_plots_path, f'confusion_matrix{norm_suffix}.png')
     plt.savefig(filename, dpi=150, bbox_inches='tight')
     print(f"Confusion matrix saved to: {filename}")
     
     # Also save as PDF
-    pdf_filename = os.path.join(SAVE_PLOTS_PATH, f'confusion_matrix{norm_suffix}.pdf')
+    pdf_filename = os.path.join(save_plots_path, f'confusion_matrix{norm_suffix}.pdf')
     plt.savefig(pdf_filename, bbox_inches='tight')
     
     plt.close()
@@ -217,9 +217,9 @@ def plot_confusion_matrix(y_true, y_pred, class_names, normalize=True):
     return cm
 
 
-def plot_sample_images(data_loader, class_names, num_classes=10, samples_per_class=3):
+def plot_sample_images(data_loader, class_names, num_classes=10, samples_per_class=3, save_plots_path):
     """Plot sample images from each class in the dataset"""
-    os.makedirs(SAVE_PLOTS_PATH, exist_ok=True)
+    os.makedirs(save_plots_path, exist_ok=True)
     
     # Get a batch of data
     images, labels = next(iter(data_loader))
@@ -260,16 +260,16 @@ def plot_sample_images(data_loader, class_names, num_classes=10, samples_per_cla
     plt.tight_layout()
     
     # Save the figure
-    filename = os.path.join(SAVE_PLOTS_PATH, 'dataset_samples.png')
+    filename = os.path.join(save_plots_path, 'dataset_samples.png')
     plt.savefig(filename, dpi=150, bbox_inches='tight')
     print(f"Dataset samples plot saved to: {filename}")
     
     plt.close(fig)
 
 
-def plot_model_architecture(model, input_size=(3, 64, 64)):
+def plot_model_architecture(model, input_size=(3, 64, 64), save_plots_path):
     """Create a simple visualization of the model architecture"""
-    os.makedirs(SAVE_PLOTS_PATH, exist_ok=True)
+    os.makedirs(save_plots_path, exist_ok=True)
     
     try:
         from torchviz import make_dot
@@ -284,10 +284,10 @@ def plot_model_architecture(model, input_size=(3, 64, 64)):
         dot = make_dot(output, params=dict(model.named_parameters()))
         
         # Save as PNG and PDF
-        png_filename = os.path.join(SAVE_PLOTS_PATH, 'model_architecture.png')
+        png_filename = os.path.join(save_plots_path, 'model_architecture.png')
         dot.render(png_filename.replace('.png', ''), format='png', cleanup=True)
         
-        pdf_filename = os.path.join(SAVE_PLOTS_PATH, 'model_architecture.pdf')
+        pdf_filename = os.path.join(save_plots_path, 'model_architecture.pdf')
         dot.render(pdf_filename.replace('.pdf', ''), format='pdf', cleanup=True)
         
         print(f"Model architecture visualization saved to: {png_filename}")
@@ -298,7 +298,7 @@ def plot_model_architecture(model, input_size=(3, 64, 64)):
         print(model)
         
         # Save text summary
-        summary_filename = os.path.join(SAVE_PLOTS_PATH, 'model_summary.txt')
+        summary_filename = os.path.join(save_plots_path, 'model_summary.txt')
         with open(summary_filename, 'w') as f:
             f.write(str(model))
             f.write(f"\n\nTotal parameters: {sum(p.numel() for p in model.parameters()):,}")
@@ -307,9 +307,9 @@ def plot_model_architecture(model, input_size=(3, 64, 64)):
         print(f"Model summary saved to: {summary_filename}")
 
 
-def save_training_metrics_to_csv(history, model_name="Model"):
+def save_training_metrics_to_csv(history, model_name="Model", save_plots_path):
     """Save training metrics to CSV file for further analysis"""
-    os.makedirs(SAVE_PLOTS_PATH, exist_ok=True)
+    os.makedirs(save_plots_path, exist_ok=True)
     
     import pandas as pd
     
@@ -323,37 +323,30 @@ def save_training_metrics_to_csv(history, model_name="Model"):
     })
     
     # Save to CSV
-    csv_filename = os.path.join(SAVE_PLOTS_PATH, f'{model_name}_training_metrics.csv')
+    csv_filename = os.path.join(save_plots_path, f'{model_name}_training_metrics.csv')
     df.to_csv(csv_filename, index=False)
     
     print(f"Training metrics saved to CSV: {csv_filename}")
     return df
 
 
-def create_training_report(history, model_name, test_accuracy, class_names, y_true=None, y_pred=None):
+def create_training_report(history, model_name, class_names, save_plots_path):
     """Create a comprehensive training report with multiple visualizations"""
-    os.makedirs(SAVE_PLOTS_PATH, exist_ok=True)
+    os.makedirs(save_plots_path, exist_ok=True)
     
     # Plot training history
-    plot_training_history(history, model_name)
+    plot_training_history(history, model_name, save_plots_path)
     
     # Save metrics to CSV
-    save_training_metrics_to_csv(history, model_name)
-    
-    # Plot confusion matrix if data provided
-    if y_true is not None and y_pred is not None:
-        plot_confusion_matrix(y_true, y_pred, class_names, normalize=True)
-        plot_confusion_matrix(y_true, y_pred, class_names, normalize=False)
+    save_training_metrics_to_csv(history, model_name, save_plots_path)
     
     # Create report text file
-    report_filename = os.path.join(SAVE_PLOTS_PATH, f'{model_name}_training_report.txt')
+    report_filename = os.path.join(save_plots_path, f'{model_name}_training_report.txt')
     with open(report_filename, 'w') as f:
         f.write(f"=== {model_name} Training Report ===\n\n")
         f.write(f"Model: {model_name}\n")
         f.write(f"Final Training Accuracy: {history['train_acc'][-1]:.2f}%\n")
         f.write(f"Final Validation Accuracy: {history['val_acc'][-1]:.2f}%\n")
-        f.write(f"Test Accuracy: {test_accuracy:.2f}%\n\n")
-        
         f.write("Training History:\n")
         f.write("Epoch | Train Loss | Val Loss | Train Acc | Val Acc\n")
         f.write("-" * 60 + "\n")

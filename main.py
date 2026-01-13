@@ -26,8 +26,18 @@ def parse_args():
                        help='Batch size for training')
     parser.add_argument('--lr', type=float, default=LEARNING_RATE,
                        help='Learning rate')
-    parser.add_argument('--data-path', type=str, default=DATA_PATH,
-                       help='Path to EuroSat dataset')
+    parser.add_argument('--patience', type=int, default=PATIENCE,
+                       help='Patience for early stopping during training')
+    parser.add_argument('--seed', type=int, default=SEED,
+                       help='Seed')
+    parser.add_argument('--data-path-train', type=str, default=DATA_PATH_TRAIN,
+                       help='Path to EuroSat Train dataset')
+    parser.add_argument('--data-path-eval', type=str, default=DATA_PATH_EVAL,
+                       help='Path to EuroSat Test dataset')
+    parser.add_argument('--save-model-path', type=str, default=SAVE_MODEL_PATH,
+                       help='Path where to save models')
+    parser.add_argument('--save-plots-path', type=str, default=SAVE_PLOTS_PATH,
+                       help='Path where to save plots')
     parser.add_argument('--train', action='store_true',
                        help='Train the model')
     parser.add_argument('--evaluate', action='store_true',
@@ -42,57 +52,61 @@ def main():
     args = parse_args()
     
     # Create output directories
-    os.makedirs(SAVE_MODEL_PATH, exist_ok=True)
-    os.makedirs(SAVE_PLOTS_PATH, exist_ok=True)
+    os.makedirs(args.save_model_path, exist_ok=True)
+    os.makedirs(args.save_plots_path, exist_ok=True)
     
     print(f"Using device: {DEVICE}")
-    print(f"Data path: {args.data_path}")
+    print(f"Data paths: train = {args.data_path_train}, eval = {args.data_path_eval}")
     
-    # Create data loaders
+    # # Create data loaders
     print("\nLoading dataset...")
-    train_loader, val_loader, test_loader, class_names = create_data_loaders(
-        data_path=args.data_path,
-        batch_size=args.batch_size
-    )
-    
+    if args.train or args.visualize:
+        train_loader, val_loader, class_names = create_data_loaders(
+            data_path=args.data_path_train,
+            batch_size=args.batch_size,
+            mode="train"
+        )
+    if args.evaluate or args.visualize:
+        test_loader, class_names = create_data_loaders(
+            data_path=args.data_path_eval,
+            batch_size=args.batch_size,
+            mode="eval"
+        )
+
     # Create model
     print(f"\nCreating {args.model} model...")
     if args.model == 'simple_cnn':
         model = create_simple_cnn(num_classes=len(class_names))
     elif args.model == 'resnet18':
         model = ResNet18(num_classes=len(class_names))
-    
+
     print(f"Model parameters: {sum(p.numel() for p in model.parameters()):,}")
-    
+
     # Create trainer
     trainer = ModelTrainer(model, device=DEVICE)
-    
+
     # Train model
     if args.train:
         print(f"\nTraining {args.model} for {args.epochs} epochs...")
         history = trainer.train(
             train_loader, val_loader,
             epochs=args.epochs,
-            lr=args.lr
+            lr=args.lr,
+            patience=args.patience
         )
         
         # Plot training history
-        plot_training_history(history, model_name=args.model)
+        plot_training_history(history, model_name=args.model, save_plots_path=args.save_plots_path)
         
         # Save final model
         trainer.save_model(f'{args.model}_final.pth')
-
-        # Evaluate on test set
-        test_accuracy, predictions, true_labels = trainer.evaluate(test_loader)
         
         # Create comprehensive report
         create_training_report(
             history=history,
             model_name=args.model,
-            test_accuracy=test_accuracy,
             class_names=class_names,
-            y_true=true_labels,
-            y_pred=predictions
+            args.save_plots_path=args.save_plots_path
         )
     
     # Evaluate model
@@ -100,7 +114,7 @@ def main():
         print("\nEvaluating model on test set...")
         
         # Load best model if exists
-        model_path = os.path.join(SAVE_MODEL_PATH, 'best_model.pth')
+        model_path = os.path.join(args.save_model_path, 'best_model.pth')
         if os.path.exists(model_path):
             trainer.load_model('best_model.pth')
             print("Loaded best model for evaluation")
@@ -109,20 +123,20 @@ def main():
         print(f"Test Accuracy: {accuracy:.2f}%")
         
         # You can add confusion matrix here if needed
-        # from utils.visualization import plot_confusion_matrix
-        # plot_confusion_matrix(true_labels, predictions, class_names)
+        from utils.visualization import plot_confusion_matrix
+        plot_confusion_matrix(true_labels, predictions, class_names, save_plots_path=args.save_plots_path)
     
     # Visualize predictions
     if args.visualize:
         print("\nVisualizing predictions...")
         
         # Load best model if exists
-        model_path = os.path.join(SAVE_MODEL_PATH, 'best_model.pth')
+        model_path = os.path.join(args.save_model_path, 'best_model.pth')
         if os.path.exists(model_path):
             trainer.load_model('best_model.pth')
         
         visualize_predictions(
-            trainer.model, test_loader, class_names, DEVICE
+            trainer.model, test_loader, class_names, DEVICE, args.save_plots_path
         )
 
         # Show dataset samples

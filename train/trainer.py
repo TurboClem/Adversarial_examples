@@ -82,7 +82,7 @@ class ModelTrainer:
         
         return val_loss, val_acc
     
-    def train(self, train_loader, val_loader, epochs=EPOCHS, lr=LEARNING_RATE):
+    def train(self, train_loader, val_loader, epochs=EPOCHS, lr=LEARNING_RATE, patience=PATIENCE):
         """Train the model for multiple epochs"""
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.AdamW(self.model.parameters(), lr=lr)
@@ -91,6 +91,7 @@ class ModelTrainer:
         )
         
         best_val_acc = 0.0
+        epochs_no_improve = 0
         
         for epoch in range(epochs):
             print(f"\nEpoch {epoch+1}/{epochs}")
@@ -118,8 +119,15 @@ class ModelTrainer:
             # Save best model
             if val_acc > best_val_acc:
                 best_val_acc = val_acc
+                epochs_no_improve = 0
                 self.save_model('best_model.pth')
                 print(f"Saved best model with val_acc: {val_acc:.2f}%")
+            else:
+                epochs_no_improve += 1
+            
+            if epochs_no_improve >= patience:
+                print(f"\nEarly stopping triggered after {epoch+1} epochs with no improvement.")
+                break
         
         print(f"\nTraining completed! Best validation accuracy: {best_val_acc:.2f}%")
         return self.history
@@ -159,38 +167,62 @@ class ModelTrainer:
         return accuracy, all_preds, all_labels
 
 
-def create_data_loaders(data_path=DATA_PATH, batch_size=BATCH_SIZE):
-    """Create train, validation, and test data loaders"""
-    # Create full dataset
-    full_dataset = EuroSatDataset(data_path, train=True)
-    
-    # Split into train, val, test
-    train_size = int(TRAIN_TEST_SPLIT * len(full_dataset))
-    val_size = int(0.5 * (len(full_dataset) - train_size))
-    test_size = len(full_dataset) - train_size - val_size
-    
-    train_dataset, val_dataset, test_dataset = random_split(
-        full_dataset, [train_size, val_size, test_size],
-        generator=torch.Generator().manual_seed(SEED)
-    )
-    
-    # Update val and test datasets to use test transforms
-    val_dataset.dataset.train = False
-    test_dataset.dataset.train = False
-    
-    # Create data loaders
-    train_loader = DataLoader(
-        train_dataset, batch_size=batch_size, shuffle=True, num_workers=2
-    )
-    val_loader = DataLoader(
-        val_dataset, batch_size=batch_size, shuffle=False, num_workers=2
-    )
-    test_loader = DataLoader(
-        test_dataset, batch_size=batch_size, shuffle=False, num_workers=2
-    )
-    
-    print(f"Train samples: {len(train_dataset)}")
-    print(f"Validation samples: {len(val_dataset)}")
-    print(f"Test samples: {len(test_dataset)}")
-    
-    return train_loader, val_loader, test_loader, full_dataset.get_class_names()
+def create_data_loaders(
+    data_path=DATA_PATH_TRAIN,
+    batch_size=BATCH_SIZE,
+    mode="train"         # "train" or "eval"
+):
+    """
+    Create PyTorch DataLoaders for EuroSAT
+
+    Args:
+        data_path (str or Path): Path to dataset (train_clean or test_clean)
+        batch_size (int)
+        mode (str): "train" -> returns train_loader, val_loader
+                    "eval"  -> returns test_loader
+    Returns:
+        If mode=="train": (train_loader, val_loader, class_names)
+        If mode=="eval" : (test_loader, class_names)
+    """
+    # Dataset
+    train_flag = mode == "train"
+    dataset = EuroSatDataset(data_path, train=train_flag)
+
+    class_names = dataset.get_class_names()
+
+    if mode == "train":
+        # Split train/val
+        total_len = len(dataset)
+        val_size = int(0.3 * total_len)
+        train_size = total_len - val_size
+
+        train_dataset, val_dataset = torch.utils.data.random_split(
+            dataset,
+            [train_size, val_size],
+            generator=torch.Generator().manual_seed(SEED)
+        )
+
+        val_dataset.dataset.train = False
+
+        train_loader = DataLoader(
+            train_dataset, batch_size=batch_size, shuffle=True, num_workers=2
+        )
+        val_loader = DataLoader(
+            val_dataset, batch_size=batch_size, shuffle=False, num_workers=2
+        )
+
+        print(f"Train samples: {len(train_dataset)}")
+        print(f"Validation samples: {len(val_dataset)}")
+        return train_loader, val_loader, class_names
+
+    elif mode == "eval":
+        # Test loader
+        test_loader = DataLoader(
+            dataset, batch_size=batch_size, shuffle=False, num_workers=2
+        )
+
+        print(f"Test samples: {len(dataset)}")
+        return test_loader, class_names
+
+    else:
+        raise ValueError("mode must be 'train' or 'eval'")
