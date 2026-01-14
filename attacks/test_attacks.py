@@ -18,17 +18,17 @@ from attacks import FGSM, PGD, visualize_attacks, create_attack_summary
 from config import IMG_SIZE, MEAN, STD, BATCH_SIZE
 
 
-def load_model_and_data(model_type='resnet18'):
+def load_model_and_data(model_type='resnet18', model_path='outputs/models/resnet18_final.pth', data_path='./data/EuroSAT_RGB'):
     
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"Using device: {device}")
     
     if model_type == 'resnet18':
         model = ResNet18().to(device)
-        model_path = 'outputs/models/resnet18_final.pth'
+        # model_path = 'outputs/models/resnet18_final.pth'
     elif model_type == 'simple_cnn':
         model = SimpleCNN().to(device)
-        model_path = 'outputs/models/simple_cnn_final.pth'
+        # model_path = 'outputs/models/simple_cnn_final.pth'
     else:
         raise ValueError(f"Unknown model type: {model_type}")
     
@@ -47,7 +47,7 @@ def load_model_and_data(model_type='resnet18'):
     
     # Test dataset
     dataset = EuroSatDataset(
-        root_dir='./data/EuroSAT_RGB',
+        root_dir=data_path,
         transform=None,
         train=False
     )
@@ -122,9 +122,9 @@ def demo_single_attack():
     )
 
 
-def evaluate_all_attacks():
+def evaluate_all_attacks(model_type, model_path, data_path):
     """Evaluate model against multiple attack configurations"""
-    model, test_loader, device, class_names = load_model_and_data('resnet18')
+    model, test_loader, device, class_names = load_model_and_data(model_type, model_path, data_path)
     
     print(f"\n{'='*60}")
     print("EVALUATION: MULTIPLE ATTACK CONFIGURATIONS")
@@ -175,7 +175,7 @@ def evaluate_all_attacks():
     print(f"Plot saved to {results_dir}/robustness_comparison.png")
 
 
-def compare_models():
+def compare_models(model_path, data_path):
     """Compare robustness of SimpleCNN vs ResNet"""
     print(f"\n{'='*60}")
     print("COMPARISON: SimpleCNN vs ResNet18")
@@ -185,7 +185,7 @@ def compare_models():
     
     for model_name in ['simple_cnn', 'resnet18']:
         print(f"\nEvaluating {model_name}...")
-        model, test_loader, device, _ = load_model_and_data(model_name)
+        model, test_loader, device, _ = load_model_and_data(model_name, model_path, data_path)
         
         # Test with strong PGD attack
         attack = PGD(model, epsilon=0.03, alpha=0.01, iterations=10)
@@ -218,8 +218,8 @@ if __name__ == "__main__":
     
     # Run demos
     demo_single_attack()
-    evaluate_all_attacks()
-    compare_models()
+    evaluate_all_attacks(model_type='resnet18', model_path='outputs/models/resnet18_final.pth', data_path='./data/EuroSAT_RGB')
+    compare_models(model_path='outputs/models/resnet18_final.pth', data_path='./data/EuroSAT_RGB')
     
     print(f"\n{'='*60}")
     print("All tests completed!")

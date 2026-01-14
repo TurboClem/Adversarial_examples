@@ -14,17 +14,21 @@ from .base_attack import BaseAttack
 class PGD(BaseAttack):
     
     def __init__(self, model, epsilon=0.03, alpha=0.01, 
-                 iterations=10, random_start=True, 
+                 iterations=10, random_start=True, seed=42,
                  targeted=False, device=None):
        
         super().__init__(model, epsilon, device)
-        self.alpha = alpha
+        self.epsilon = epsilon.to(device) if torch.is_tensor(epsilon) else epsilon
+        self.alpha = alpha.to(device) if torch.is_tensor(alpha) else alpha
         self.iterations = iterations
         self.random_start = random_start
+        self.rng = torch.Generator(device=device)
+        if seed:
+            self.rng.manual_seed(seed)
         self.targeted = targeted
         
         # alpha should be <= epsilon/iterations for stability
-        if alpha > epsilon / iterations:
+        if torch.any(alpha > epsilon / iterations):
             print(f"Warning: alpha={alpha} might be too large for ε={epsilon}, iterations={iterations}")
     
     def attack(self, images, labels, target_labels=None):
@@ -47,8 +51,15 @@ class PGD(BaseAttack):
        
         if self.random_start:
             # Start from random point within epsilon ball
-            random_noise = torch.empty_like(images).uniform_(-self.epsilon, self.epsilon)
-            adversarial_images = torch.clamp(images + random_noise, 0, 1)
+            random_noise = (
+                torch.rand(
+                    images.shape,
+                    device=images.device,
+                    generator=self.rng
+                ) * 2 - 1
+            ) * self.epsilon
+            # random_noise = torch.empty_like(images, generator=self.rng).uniform_(-self.epsilon, self.epsilon)
+            adversarial_images = torch.clamp(images + random_noise, images.min(), images.max())# min, max = 0, 1?
         
         # PGD iterations
         for i in range(self.iterations):
@@ -79,7 +90,11 @@ class PGD(BaseAttack):
                 
                 
                 delta = adversarial_images - images
-                delta = torch.clamp(delta, -self.epsilon, self.epsilon)
+                # delta = torch.clamp(delta, -self.epsilon, self.epsilon)
+                delta = torch.max(
+                    torch.min(delta, self.epsilon),
+                    -self.epsilon
+                )
                 adversarial_images = images + delta
                 
                 

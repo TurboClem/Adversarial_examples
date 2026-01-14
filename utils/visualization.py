@@ -13,10 +13,10 @@ import os
 import seaborn as sns
 from sklearn.metrics import confusion_matrix, classification_report
 
-from config import MEAN, STD
+from config import MEAN, STD, SAVE_PLOTS_PATH
 
 
-def plot_training_history(history, model_name="Model", save_plots_path):
+def plot_training_history(history, model_name="Model", save_plots_path=SAVE_PLOTS_PATH):
     """Plot training and validation metrics and save to file"""
     os.makedirs(save_plots_path, exist_ok=True)
     
@@ -76,7 +76,7 @@ def plot_training_history(history, model_name="Model", save_plots_path):
     plt.close(fig)  # Close the figure to free memory
 
 
-def visualize_predictions(model, data_loader, class_names, device, num_samples=16, save=True, save_plots_path):
+def visualize_predictions(model, data_loader, class_names, device, num_samples=16, save=True, save_plots_path=SAVE_PLOTS_PATH):
     """Visualize model predictions on sample images and save to file"""
     model.eval()
     
@@ -165,7 +165,7 @@ def denormalize(tensor):
     return torch.clamp(tensor, 0, 1)
 
 
-def plot_confusion_matrix(y_true, y_pred, class_names, normalize=True, save_plots_path):
+def plot_confusion_matrix(y_true, y_pred, class_names, normalize=True, save_plots_path=SAVE_PLOTS_PATH):
     """Plot confusion matrix and save to file"""
     os.makedirs(save_plots_path, exist_ok=True)
     
@@ -217,7 +217,7 @@ def plot_confusion_matrix(y_true, y_pred, class_names, normalize=True, save_plot
     return cm
 
 
-def plot_sample_images(data_loader, class_names, num_classes=10, samples_per_class=3, save_plots_path):
+def plot_sample_images(data_loader, class_names, num_classes=10, samples_per_class=3, save_plots_path=SAVE_PLOTS_PATH):
     """Plot sample images from each class in the dataset"""
     os.makedirs(save_plots_path, exist_ok=True)
     
@@ -267,7 +267,7 @@ def plot_sample_images(data_loader, class_names, num_classes=10, samples_per_cla
     plt.close(fig)
 
 
-def plot_model_architecture(model, input_size=(3, 64, 64), save_plots_path):
+def plot_model_architecture(model, input_size=(3, 64, 64), save_plots_path=SAVE_PLOTS_PATH):
     """Create a simple visualization of the model architecture"""
     os.makedirs(save_plots_path, exist_ok=True)
     
@@ -307,7 +307,7 @@ def plot_model_architecture(model, input_size=(3, 64, 64), save_plots_path):
         print(f"Model summary saved to: {summary_filename}")
 
 
-def save_training_metrics_to_csv(history, model_name="Model", save_plots_path):
+def save_training_metrics_to_csv(history, model_name="Model", save_plots_path=SAVE_PLOTS_PATH):
     """Save training metrics to CSV file for further analysis"""
     os.makedirs(save_plots_path, exist_ok=True)
     

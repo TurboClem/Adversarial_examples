@@ -106,7 +106,7 @@ def main():
             history=history,
             model_name=args.model,
             class_names=class_names,
-            args.save_plots_path=args.save_plots_path
+            save_plots_path=args.save_plots_path
         )
     
     # Evaluate model
@@ -136,7 +136,7 @@ def main():
             trainer.load_model('best_model.pth')
         
         visualize_predictions(
-            trainer.model, test_loader, class_names, DEVICE, args.save_plots_path
+            trainer.model, test_loader, class_names, DEVICE, 16, True, args.save_plots_path
         )
 
         # Show dataset samples
