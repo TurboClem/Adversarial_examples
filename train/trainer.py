@@ -26,7 +26,7 @@ class ModelTrainer:
             'val_acc': []
         }
     
-    def train_epoch(self, train_loader, criterion, optimizer):
+    def train_epoch(self, train_loader, criterion, optimizer, madry):
         """Train for one epoch"""
         self.model.train()
         running_loss = 0.0
@@ -37,6 +37,20 @@ class ModelTrainer:
         for batch_idx, (inputs, targets) in enumerate(pbar):
             inputs, targets = inputs.to(self.device), targets.to(self.device)
             
+            if madry:
+                epsilon = madry['epsilon']
+                alpha = madry['alpha']
+                epsilon = epsilon.to(self.device) if torch.is_tensor(epsilon) else epsilon
+                alpha   = alpha.to(self.device)   if torch.is_tensor(alpha) else alpha
+                pgd_steps = madry['pgd_steps']
+                inputs = self.pgd_attack_train(
+                    inputs,
+                    targets,
+                    epsilon=epsilon,
+                    alpha=alpha,
+                    iterations=pgd_steps
+                )
+
             optimizer.zero_grad()
             outputs = self.model(inputs)
             loss = criterion(outputs, targets)
@@ -82,7 +96,7 @@ class ModelTrainer:
         
         return val_loss, val_acc
     
-    def train(self, train_loader, val_loader, epochs=EPOCHS, lr=LEARNING_RATE, patience=PATIENCE):
+    def train(self, train_loader, val_loader, madry, epochs=EPOCHS, lr=LEARNING_RATE, patience=PATIENCE):
         """Train the model for multiple epochs"""
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.AdamW(self.model.parameters(), lr=lr)
@@ -98,7 +112,7 @@ class ModelTrainer:
             print("-" * 50)
             
             # Train
-            train_loss, train_acc = self.train_epoch(train_loader, criterion, optimizer)
+            train_loss, train_acc = self.train_epoch(train_loader, criterion, optimizer, madry)
             
             # Validate
             val_loss, val_acc = self.validate(val_loader, criterion)
@@ -165,6 +179,39 @@ class ModelTrainer:
         
         accuracy = 100. * np.sum(np.array(all_preds) == np.array(all_labels)) / len(all_labels)
         return accuracy, all_preds, all_labels
+    
+    def pgd_attack_train(
+        self,
+        images,
+        labels,
+        epsilon,
+        alpha,
+        iterations
+    ):
+        self.model.eval()
+
+        images = images.detach().to(self.device)
+        labels = labels.to(self.device)
+
+        # Random start
+        delta = (torch.rand_like(images) * 2 - 1) * epsilon
+        delta = torch.clamp(delta, -epsilon, epsilon)
+        adv_images = images + delta
+        adv_images = torch.clamp(adv_images, 0, 1)
+
+        for _ in range(iterations):
+            adv_images.requires_grad = True
+            outputs = self.model(adv_images)
+            
+            loss = nn.functional.cross_entropy(outputs, labels)
+
+            grad = torch.autograd.grad(loss, adv_images)[0]
+
+            adv_images = adv_images + alpha * torch.sign(grad)
+            delta = torch.clamp(adv_images - images, -epsilon, epsilon)
+            adv_images = torch.clamp(images + delta, 0, 1).detach()
+
+        return adv_images
 
 
 def create_data_loaders(
