@@ -24,7 +24,7 @@ MADRY = None
 MODEL_TYPE = 'simple_cnn'  # Options: 'simple_cnn', 'resnet'
 
 # Paths
-SAVE_MODEL_PATH = 'outputs/model/'
+SAVE_MODEL_PATH = 'outputs/models/'
 SAVE_PLOTS_PATH = 'outputs/plots/'
 
 # Data transforms

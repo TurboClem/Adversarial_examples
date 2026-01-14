@@ -101,14 +101,15 @@ def main():
             epochs=args.epochs,
             lr=args.lr,
             patience=args.patience,
-            madry=madry
+            madry=madry,
+            save_model_path=args.save_model_path
         )
         
         # Plot training history
         plot_training_history(history, model_name=args.model, save_plots_path=args.save_plots_path)
         
         # Save final model
-        trainer.save_model(f'{args.model}_final.pth')
+        trainer.save_model(filename=f'{args.model}_final.pth', save_model_path=args.save_model_path)
         
         # Create comprehensive report
         create_training_report(
@@ -125,7 +126,7 @@ def main():
         # Load best model if exists
         model_path = os.path.join(args.save_model_path, 'best_model.pth')
         if os.path.exists(model_path):
-            trainer.load_model('best_model.pth')
+            trainer.load_model(filename='best_model.pth', save_model_path=args.save_model_path)
             print("Loaded best model for evaluation")
         
         accuracy, predictions, true_labels = trainer.evaluate(test_loader)
@@ -142,7 +143,7 @@ def main():
         # Load best model if exists
         model_path = os.path.join(args.save_model_path, 'best_model.pth')
         if os.path.exists(model_path):
-            trainer.load_model('best_model.pth')
+            trainer.load_model(filename='best_model.pth', save_model_path=args.save_model_path)
         
         visualize_predictions(
             trainer.model, test_loader, class_names, DEVICE, 16, True, args.save_plots_path

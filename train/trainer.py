@@ -41,13 +41,13 @@ class ModelTrainer:
                 epsilon = madry['epsilon']
                 alpha = madry['alpha']
                 epsilon = epsilon.to(self.device) if torch.is_tensor(epsilon) else epsilon
-                alpha   = alpha.to(self.device)   if torch.is_tensor(alpha) else alpha
+                alpha = alpha.to(self.device) if torch.is_tensor(alpha) else alpha
                 pgd_steps = madry['pgd_steps']
                 inputs = self.pgd_attack_train(
                     inputs,
                     targets,
-                    epsilon=epsilon,
-                    alpha=alpha,
+                    epsilon_pixel=epsilon,
+                    alpha_pixel=alpha,
                     iterations=pgd_steps
                 )
 
@@ -96,7 +96,7 @@ class ModelTrainer:
         
         return val_loss, val_acc
     
-    def train(self, train_loader, val_loader, epochs=EPOCHS, lr=LEARNING_RATE, patience=PATIENCE, madry=MADRY):
+    def train(self, train_loader, val_loader, epochs=EPOCHS, lr=LEARNING_RATE, patience=PATIENCE, madry=MADRY, save_model_path=SAVE_MODEL_PATH):
         """Train the model for multiple epochs"""
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.AdamW(self.model.parameters(), lr=lr)
@@ -134,7 +134,7 @@ class ModelTrainer:
             if val_acc > best_val_acc:
                 best_val_acc = val_acc
                 epochs_no_improve = 0
-                self.save_model('best_model.pth')
+                self.save_model(filename='best_model.pth', save_model_path=save_model_path)
                 print(f"Saved best model with val_acc: {val_acc:.2f}%")
             else:
                 epochs_no_improve += 1
@@ -146,18 +146,18 @@ class ModelTrainer:
         print(f"\nTraining completed! Best validation accuracy: {best_val_acc:.2f}%")
         return self.history
     
-    def save_model(self, filename):
+    def save_model(self, filename, save_model_path=SAVE_MODEL_PATH):
         """Save model checkpoint"""
-        os.makedirs(SAVE_MODEL_PATH, exist_ok=True)
+        os.makedirs(save_model_path, exist_ok=True)
         torch.save({
             'model_state_dict': self.model.state_dict(),
             'history': self.history,
             'model_type': type(self.model).__name__
-        }, os.path.join(SAVE_MODEL_PATH, filename))
+        }, os.path.join(save_model_path, filename))
     
-    def load_model(self, filename):
+    def load_model(self, filename, save_model_path=SAVE_MODEL_PATH):
         """Load model checkpoint"""
-        checkpoint = torch.load(os.path.join(SAVE_MODEL_PATH, filename))
+        checkpoint = torch.load(os.path.join(save_model_path, filename))
         self.model.load_state_dict(checkpoint['model_state_dict'])
         self.history = checkpoint.get('history', self.history)
         return checkpoint
@@ -184,8 +184,8 @@ class ModelTrainer:
         self,
         images,
         labels,
-        epsilon,
-        alpha,
+        epsilon_pixel,
+        alpha_pixel,
         iterations
     ):
         self.model.eval()
@@ -193,6 +193,9 @@ class ModelTrainer:
         images = images.detach().to(self.device)
         labels = labels.to(self.device)
 
+        epsilon = torch.tensor([epsilon_pixel / s for s in STD]).view(1,3,1,1).to(self.device)
+        alpha = torch.tensor([alpha_pixel / s for s in STD]).view(1,3,1,1).to(self.device)
+        
         # Random start
         delta = (torch.rand_like(images) * 2 - 1) * epsilon
         delta = torch.clamp(delta, -epsilon, epsilon)
