@@ -4,6 +4,7 @@ Main script for EuroSat adversarial robustness project
 import argparse
 import os
 import sys
+import json
 
 # Add project root to path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -28,6 +29,8 @@ def parse_args():
                        help='Learning rate')
     parser.add_argument('--patience', type=int, default=PATIENCE,
                        help='Patience for early stopping during training')
+    parser.add_argument('--madry', type=str, default=MADRY,
+                       help='Madry adversarial training config as JSON')
     parser.add_argument('--seed', type=int, default=SEED,
                        help='Seed')
     parser.add_argument('--data-path-train', type=str, default=DATA_PATH_TRAIN,
@@ -87,12 +90,18 @@ def main():
 
     # Train model
     if args.train:
+
+        madry = None
+        if args.madry is not None:
+            madry = json.loads(args.madry)
+
         print(f"\nTraining {args.model} for {args.epochs} epochs...")
         history = trainer.train(
             train_loader, val_loader,
             epochs=args.epochs,
             lr=args.lr,
-            patience=args.patience
+            patience=args.patience,
+            madry=madry
         )
         
         # Plot training history

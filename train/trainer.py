@@ -96,7 +96,7 @@ class ModelTrainer:
         
         return val_loss, val_acc
     
-    def train(self, train_loader, val_loader, madry, epochs=EPOCHS, lr=LEARNING_RATE, patience=PATIENCE):
+    def train(self, train_loader, val_loader, epochs=EPOCHS, lr=LEARNING_RATE, patience=PATIENCE, madry=MADRY):
         """Train the model for multiple epochs"""
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.AdamW(self.model.parameters(), lr=lr)

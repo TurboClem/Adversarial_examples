@@ -18,12 +18,13 @@ EPOCHS = 15
 LEARNING_RATE = 0.001
 PATIENCE = int(EPOCHS / 5)
 SEED = 42  # For reproducibility
+MADRY = None
 
 # Model configuration
 MODEL_TYPE = 'simple_cnn'  # Options: 'simple_cnn', 'resnet'
 
 # Paths
-SAVE_MODEL_PATH = 'outputs/models/'
+SAVE_MODEL_PATH = 'outputs/model/'
 SAVE_PLOTS_PATH = 'outputs/plots/'
 
 # Data transforms
