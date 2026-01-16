@@ -2,7 +2,8 @@
 import torch
 from models import ResNet18
 from datasets.feature_analysis import FeatureAnalysisDatasetGenerator
-
+import sys
+import json
 # %%
 # Load the baseline model (your 97.56% accuracy model)
 model_path = 'outputs/models/baseline/best_model.pth'
@@ -16,86 +17,98 @@ baseline_model.eval()
 # %%
 generator = FeatureAnalysisDatasetGenerator(baseline_model, device=device)
 
+# %%
 # Create non-robust dataset with FGSM (weak attack)
-non_robust_path = 'datasets/EuroSAT_RGB/train_nonrobust_fgsm'
-generator.create_non_robust_dataset(
-    clean_train_path='datasets/EuroSAT_RGB/train_clean',
-    save_path=non_robust_path,
-    attack_type='fgsm',
-    epsilon=0.01,  # Small epsilon
-    mislabel_strategy='random'
-)
+for type in ['train', 'test']:
+    non_robust_path = f'datasets/EuroSAT_RGB/{type}_nonrobust_fgsm'
+    generator.create_non_robust_dataset(
+        clean_train_path=f'datasets/EuroSAT_RGB/{type}_clean',
+        save_path=non_robust_path,
+        attack_type='fgsm',
+        epsilon=0.01,  # Small epsilon
+        mislabel_strategy='random'
+    )
 
 # %%
 # Create non-robust dataset with PGD (for comparison)
-non_robust_pgd_path = 'datasets/EuroSAT_RGB/train_nonrobust_pgd'
-generator.create_non_robust_dataset(
-    clean_train_path='datasets/EuroSAT_RGB/train_clean',
-    save_path=non_robust_pgd_path,
-    attack_type='pgd',
-    epsilon=0.01,
-    alpha=0.002,
-    iterations=3,
-    mislabel_strategy='random'
-)
+for type in ['train', 'test']:
+    non_robust_pgd_path = f'datasets/EuroSAT_RGB/{type}_nonrobust_pgd'
+    generator.create_non_robust_dataset(
+        clean_train_path=f'datasets/EuroSAT_RGB/{type}_clean',
+        save_path=non_robust_pgd_path,
+        attack_type='pgd',
+        epsilon=0.01,
+        alpha=0.002,
+        iterations=3,
+        mislabel_strategy='random'
+    )
 
 # %%
-random_noise_path = 'datasets/EuroSAT_RGB/train_random_noise'
-generator.create_random_noise_dataset(
-    clean_train_path='datasets/EuroSAT_RGB/train_clean',
-    save_path=random_noise_path,
-    epsilon=0.01  # Same magnitude as adversarial attacks
-)
+# Create random noise dataset
+for type in ['train', 'test']:
+    random_noise_path = f'datasets/EuroSAT_RGB/{type}_random_noise'
+    generator.create_random_noise_dataset(
+        clean_train_path=f'datasets/EuroSAT_RGB/{type}_clean',
+        save_path=random_noise_path,
+        epsilon=0.01  # Same magnitude as adversarial attacks
+    )
 
 # %%
-# Train on Non-Robust FGSM Dataset
-import sys
-import json
 
+
+def train(model_name: str):
+
+    sys.argv = [
+        "main.py",
+        "--model", "resnet18",
+        "--train",
+        "--visualize",
+        "--epochs", "30",
+        "--patience", "10",
+        "--lr", "0.001",
+        "--batch-size", "32",
+        "--seed", "42",
+        "--data-path-train", f"datasets/EuroSAT_RGB/train_{model_name}",
+        "--save-model-path", f"outputs/models/{model_name}",
+        "--save-plots-path", f"outputs/plots/{model_name}",
+    ]
+
+    from main import main
+    main()
+
+
+def evaluate(model_name: str, adv: bool):
+    test_name = f"test_{model_name}" if adv else "test_clean"
+
+    sys.argv = [
+        "main.py",
+        "--model", "resnet18",
+        "--evaluate",
+        "--visualize",
+        "--seed", "42",
+        "--data-path-eval", f"datasets/EuroSAT_RGB/{test_name}",
+        "--save-model-path", f"outputs/models/{model_name}",
+        "--save-plots-path", f"outputs/plots/{model_name}",
+    ]
+
+    from main import main
+    main()
+
+
+# %%
 # Train on FGSM non-robust dataset
-sys.argv = [
-    "main.py",
-    "--model", "resnet18",
-    "--train",
-    "--evaluate",
-    "--visualize",
-    "--epochs", "30",
-    "--patience", "10",
-    "--lr", "0.001",
-    "--batch-size", "32",
-    "--seed", "42",
-    "--data-path-train", "datasets/EuroSAT_RGB/train_nonrobust_fgsm",
-    "--data-path-eval", "datasets/EuroSAT_RGB/test_clean",  # Test on CLEAN data
-    "--save-model-path", "outputs/models/nonrobust_fgsm",
-    "--save-plots-path", "outputs/plots/nonrobust_fgsm",
-]
-
-from main import main
-main()
+model_name = "nonrobust_fgsm"
+# train(model_name)
+evaluate(model_name, adv=True)
+evaluate(model_name, adv=False)
 
 
 # %%
 # Train on Random Noise Dataset
-sys.argv = [
-    "main.py",
-    "--model", "resnet18",
-    "--train",
-    "--evaluate",
-    "--visualize",
-    "--epochs", "30",
-    "--patience", "10",
-    "--lr", "0.001",
-    "--batch-size", "32",
-    "--seed", "42",
-    "--data-path-train", "datasets/EuroSAT_RGB/train_random_noise",
-    "--data-path-eval", "datasets/EuroSAT_RGB/test_clean",  # Test on CLEAN data
-    "--save-model-path", "outputs/models/random_noise",
-    "--save-plots-path", "outputs/plots/random_noise",
-]
-
-from main import main
-main()
-
+model_name = "random_noise"
+# train(model_name)
+evaluate(model_name, adv=True)
+evaluate(model_name, adv=False)
 
 # %%
 # Collect all results automatically
@@ -130,18 +143,18 @@ print(df_results.to_string(index=False))
 
 # Save to CSV
 csv_path = 'outputs/results/experiment_results.csv'
-df.to_csv(csv_path, index=False)
+df_results.to_csv(csv_path, index=False)
 print(f"\nResults saved to: {csv_path}")
 
 # %%
 # Generate feature analysis summary
-from analysis.feature_analysis import create_feature_analysis_summary
+from datasets.feature_analysis import create_feature_analysis_summary
 
 df_analysis = create_feature_analysis_summary()
 
 # %%
 # Visualize non-robust model predictions
-from analysis.feature_analysis import visualize_non_robust_features
+from datasets.feature_analysis import visualize_non_robust_features
 
 print("\n" + "="*80)
 print("VISUALIZING NON-ROBUST MODEL PREDICTIONS")
@@ -166,11 +179,17 @@ baseline_acc = df_results[df_results['Experiment'] == 'baseline']['Clean Test Ac
 nonrobust_acc = df_results[df_results['Experiment'] == 'nonrobust_fgsm']['Clean Test Acc'].values[0]
 random_acc = df_results[df_results['Experiment'] == 'random_noise']['Clean Test Acc'].values[0]
 
-print(f"\nKey Results:")
-print(f"1. Baseline (clean training): {baseline_acc:.2f}%")
-print(f"2. Non-Robust Dataset (FGSM): {nonrobust_acc:.2f}%")
-print(f"3. Random Noise Dataset: {random_acc:.2f}%")
-print(f"4. Difference (Non-Robust vs Random): {nonrobust_acc - random_acc:.2f}% points")
+print(baseline_acc, nonrobust_acc, random_acc)
+
+print("\nKey Results:")
+#print(f"1_ Baseline (clean training): {baseline_acc:.2f}%")
+#print(f"2_ Non-Robust Dataset (FGSM): {nonrobust_acc:.2f}%")
+#print(f"3_ Random Noise Dataset: {random_acc:.2f}%")
+#print(f"4_ Difference (Non-Robust vs Random): {nonrobust_acc - random_acc:.2f}% points")
+print(f"1_ Baseline (clean training): {baseline_acc}%")
+print(f"2_ Non-Robust Dataset (FGSM): {nonrobust_acc}%")
+print(f"3_ Random Noise Dataset: {random_acc}%")
+print(f"4_ Difference (Non-Robust vs Random): {float(nonrobust_acc) - float(random_acc):.2f}% points")
 
 if nonrobust_acc > random_acc + 15:
     print("\nSTRONG EVIDENCE: Adversarial perturbations contain predictive features!")
@@ -182,3 +201,5 @@ elif nonrobust_acc > random_acc:
 else:
     print("\n✗ INCONCLUSIVE: No clear evidence of non-robust features")
     print("  - Possible issues: epsilon too small, attack too weak")
+
+# %%

@@ -170,6 +170,9 @@ class FeatureAnalysisDatasetGenerator:
         # Create save directory
         save_dir = Path(save_path)
         save_dir.mkdir(parents=True, exist_ok=True)
+
+        config_dir = save_dir.parent / f"{save_dir.name}_config"
+        config_dir.mkdir(exist_ok=True)
         
         # Get class names
         class_names = dataset.classes
@@ -218,7 +221,8 @@ class FeatureAnalysisDatasetGenerator:
             'num_images': img_idx
         }
         
-        config_path = save_dir / 'dataset_config.json'
+        config_path = config_dir / 'dataset_config.json'
+
         import json
         with open(config_path, 'w') as f:
             json.dump(config, f, indent=4)

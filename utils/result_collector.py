@@ -43,6 +43,38 @@ class ResultCollector:
         
         return metrics
     
+    def extract_from_evaluation_log(self, log_file):
+        """Extract metrics from NEW evaluation log format"""
+        metrics = {}
+        
+        if os.path.exists(log_file):
+            with open(log_file, 'r') as f:
+                content = f.read()
+            
+            # Extract test accuracy from NEW format
+            # Looks for: "Test Accuracy: 9.44%"
+            test_acc_match = re.search(r'Test Accuracy:\s*([\d\.]+)%', content)
+            if test_acc_match:
+                metrics['Clean Test Acc'] = float(test_acc_match.group(1))
+                print(f"  Found test accuracy: {metrics['Clean Test Acc']}%")
+            
+            # Also look for the simple format (backward compatibility)
+            simple_match = re.search(r'^Test Accuracy:\s*([\d\.]+)%', content, re.MULTILINE)
+            if simple_match and 'Clean Test Acc' not in metrics:
+                metrics['Clean Test Acc'] = float(simple_match.group(1))
+            
+            # Extract dataset info
+            dataset_match = re.search(r'Dataset:\s*(.+)', content)
+            if dataset_match:
+                metrics['dataset_path'] = dataset_match.group(1)
+            
+            # Extract total samples
+            samples_match = re.search(r'Total Samples:\s*(\d+)', content)
+            if samples_match:
+                metrics['total_samples'] = int(samples_match.group(1))
+        
+        return metrics
+    
     def extract_from_model_checkpoint(self, model_path):
         """Extract metrics from model checkpoint"""
         metrics = {}
@@ -128,22 +160,75 @@ class ResultCollector:
                     config[key] = float(match.group(1))
         
         # Try to get test accuracy from evaluation
-        test_log = os.path.join(plots_dir, 'test_evaluation.log')
-        if os.path.exists(test_log):
-            test_acc = self.get_test_accuracy(test_log)
-            if test_acc:
-                config['Clean Test Acc'] = test_acc
+        #test_log = os.path.join(plots_dir, 'test_evaluation.log')
+        #if os.path.exists(test_log):
+        #    test_acc = self.get_test_accuracy(test_log)
+        #    if test_acc:
+        #        config['Clean Test Acc'] = test_acc
+
+        # 1. Try to extract from NEW evaluation log
+        eval_log = os.path.join(plots_dir, 'evaluation.log')
+        if os.path.exists(eval_log):
+            print(f"  Found evaluation log: {eval_log}")
+            eval_metrics = self.extract_from_evaluation_log(eval_log)
+            config.update(eval_metrics)
+        else:
+            print(f"  No evaluation.log found at: {eval_log}")
+            # Try alternative names
+            alt_logs = ['test_evaluation.log', 'eval.log', 'evaluation_results.log']
+            for alt_log in alt_logs:
+                alt_path = os.path.join(plots_dir, alt_log)
+                if os.path.exists(alt_path):
+                    print(f"  Found alternative log: {alt_path}")
+                    eval_metrics = self.extract_from_evaluation_log(alt_path)
+                    config.update(eval_metrics)
+                    break
         
         # Try to get adversarial accuracy
-        adv_test_log = os.path.join(plots_dir, 'test_pgd_eps002', 'test_evaluation.log')
-        if os.path.exists(adv_test_log):
-            adv_acc = self.get_adversarial_accuracy(adv_test_log)
-            if adv_acc:
-                config['Adv Test Acc'] = adv_acc
+        #adv_test_log = os.path.join(plots_dir, 'test_pgd_eps002', 'test_evaluation.log')
+        #if os.path.exists(adv_test_log):
+        #    adv_acc = self.get_adversarial_accuracy(adv_test_log)
+        #    if adv_acc:
+        #        config['Adv Test Acc'] = adv_acc
+        #        
+        #        # Calculate accuracy drop
+        #        if 'Clean Test Acc' in config:
+        #            config['Adv Acc Drop'] = config['Clean Test Acc'] - adv_acc
+
+
+        # Look for ADVERSARIAL evaluation (PGD attacked test)
+        # Check if there's a subdirectory with adversarial test results
+        adv_dirs_to_check = [
+            os.path.join(plots_dir, 'test_pgd_eps002'),
+            os.path.join(plots_dir, 'adv_evaluation'),
+            os.path.join(plots_dir, 'adversarial_test'),
+            os.path.join(os.path.dirname(plots_dir), f'{experiment_name}_adv'),  # sibling directory
+        ]
+    
+        for adv_dir in adv_dirs_to_check:
+            if os.path.exists(adv_dir):
+                print(f"  Checking adversarial directory: {adv_dir}")
                 
-                # Calculate accuracy drop
-                if 'Clean Test Acc' in config:
-                    config['Adv Acc Drop'] = config['Clean Test Acc'] - adv_acc
+                # Look for evaluation logs in this directory
+                adv_logs_to_check = [
+                    os.path.join(adv_dir, 'evaluation.log'),
+                    os.path.join(adv_dir, 'test_evaluation.log'),
+                    os.path.join(adv_dir, 'adv_evaluation.log'),
+                ]
+                
+                for adv_log_path in adv_logs_to_check:
+                    if os.path.exists(adv_log_path):
+                        print(f"    Found adversarial log: {adv_log_path}")
+                        adv_acc = self.extract_from_evaluation_log(adv_log_path).get('Clean Test Acc')
+                        if adv_acc:
+                            config['Adv Test Acc'] = adv_acc
+                            
+                            # Calculate accuracy drop
+                            if 'Clean Test Acc' in config:
+                                config['Adv Acc Drop'] = config['Clean Test Acc'] - adv_acc
+                            break
+                if 'Adv Test Acc' in config:
+                    break
         
         # Extract from model checkpoint
         model_path = os.path.join(model_dir, 'best_model.pth')
