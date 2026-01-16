@@ -171,6 +171,33 @@ def main():
         accuracy, predictions, true_labels = trainer.evaluate(test_loader)
         print(f"Test Accuracy: {accuracy:.2f}%")
 
+        from utils.evaluation_logger import EvaluationLogger
+    
+        logger = EvaluationLogger()
+        
+        # Determine dataset type
+        dataset_name = os.path.basename(args.data_path_eval)
+        if any(i in dataset_name.lower() for i in ['pgd', 'fgsm', 'noise', 'adv']):
+            eval_type = 'adversarial'
+        else:
+            eval_type = 'clean'
+        
+        # Log evaluation
+        _, _, _ = logger.evaluate_and_log(
+            model=trainer.model,
+            test_loader=test_loader,
+            experiment_name=args.model,
+            dataset_name=f"{eval_type}_{dataset_name}",
+            dataset_path=args.data_path_eval,
+            model_name=args.model,
+            device=DEVICE,
+            save_plots_path=args.save_plots_path,
+            additional_info={
+                'command_line_args': vars(args),
+                'seed': args.seed,
+            }
+        )
+        
         # You can add confusion matrix here if needed
         from utils.visualization import plot_confusion_matrix
 
