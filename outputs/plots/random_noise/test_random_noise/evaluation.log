@@ -1,0 +1,6 @@
+Evaluation Results
+==================
+Model: resnet18
+Dataset: datasets/EuroSAT_RGB/test_random_noise
+Test Accuracy: 11.00%
+Total Samples: 5400

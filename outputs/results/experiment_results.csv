@@ -1,0 +1,6 @@
+Experiment,Dataset Type,Attack Type,Epsilon,Train Acc,Val Acc,Best Val Acc,Clean Test Acc,Adv Test Acc,Adv Acc Drop
+baseline,clean,none,0.000,99.35%,97.56%,97.56%,N/A,N/A,N/A
+madry_eps001,adversarial_training,pgd,0.010,62.45%,25.74%,25.74%,N/A,N/A,N/A
+madry_eps003,adversarial_training,pgd,0.030,50.72%,21.06%,21.06%,N/A,N/A,N/A
+nonrobust_fgsm,non_robust,fgsm,0.010,11.85%,11.71%,11.71%,9.44%,10.44%,-1.00%
+random_noise,random_noise,none,0.010,12.33%,12.48%,12.48%,5.37%,11.00%,-5.63%
