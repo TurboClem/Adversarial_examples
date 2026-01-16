@@ -32,14 +32,15 @@ class FeatureAnalysisDatasetGenerator:
         torch.manual_seed(seed)  # ← Set PyTorch seed
         random.seed(seed)  # ← Set Python random seed
     
-    def create_non_robust_dataset(self, 
+    def create_non_robust_dataset(self,
                                  clean_train_path, 
                                  save_path,
                                  attack_type='fgsm',
                                  epsilon=0.01,
                                  alpha=0.002,
                                  iterations=5,
-                                 mislabel_strategy='random'):
+                                 mislabel_strategy='random',
+                                 attack_strategy='target'):
         """
         Create a 'non-robust' dataset (experiment 2b from Ilyas et al.)
         
@@ -92,11 +93,10 @@ class FeatureAnalysisDatasetGenerator:
         for batch_idx, (images, true_labels) in enumerate(tqdm(dataloader, desc="Generating non-robust dataset")):
             images = images.to(self.device)
             true_labels = true_labels.to(self.device)
-            
-            # Generate adversarial perturbations
-            with torch.enable_grad():
-                adv_images = attack.attack(images, true_labels)
-            
+
+            # with torch.enable_grad():
+            #    adv_images = attack.attack(images, true_labels, target_labels=None)
+
             # Determine incorrect labels
             if mislabel_strategy == 'random':
                 # Random incorrect labels (different from true label)
@@ -108,8 +108,16 @@ class FeatureAnalysisDatasetGenerator:
                 while mask.any():
                     incorrect_labels[mask] = torch.randint(0, n_classes, (mask.sum(),), device=self.device)
                     mask = (incorrect_labels == true_labels)
-            
+                
+                target_labels = incorrect_labels if attack_strategy == 'target' else None
+
+                # Generate adversarial perturbations
+                with torch.enable_grad():
+                    adv_images = attack.attack(images, true_labels, target_labels=target_labels)
+
             elif mislabel_strategy == 'adversarial':
+                with torch.enable_grad():
+                    adv_images = attack.attack(images, true_labels)
                 # Use model's prediction on adversarial examples as incorrect labels
                 with torch.no_grad():
                     outputs = self.base_model(adv_images)

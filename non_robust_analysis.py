@@ -27,7 +27,8 @@ for type in ['train', 'test']:
         save_path=non_robust_path,
         attack_type='fgsm',
         epsilon=0.01,  # Small epsilon
-        mislabel_strategy='random'
+        mislabel_strategy='random',
+        attack_strategy='target',
     )
 
 # %%
@@ -41,7 +42,8 @@ for type in ['train', 'test']:
         epsilon=0.01,
         alpha=0.002,
         iterations=3,
-        mislabel_strategy='random'
+        mislabel_strategy='random',
+        attack_strategy='target',
     )
 
 # %%
@@ -99,7 +101,7 @@ def evaluate(model_name: str, adv: bool):
 # %%
 # Train on FGSM non-robust dataset
 model_name = "nonrobust_fgsm"
-# train(model_name)
+train(model_name)
 evaluate(model_name, adv=True)
 evaluate(model_name, adv=False)
 
@@ -107,7 +109,7 @@ evaluate(model_name, adv=False)
 # %%
 # Train on Random Noise Dataset
 model_name = "random_noise"
-# train(model_name)
+train(model_name)
 evaluate(model_name, adv=True)
 evaluate(model_name, adv=False)
 
