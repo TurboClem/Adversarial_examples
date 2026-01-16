@@ -374,6 +374,67 @@ def save_training_metrics_to_csv(
     print(f"Training metrics saved to CSV: {csv_filename}")
     return df
 
+def plot_advprop_training_history(history, model_name="AdvProp Model", save_plots_path=SAVE_PLOTS_PATH):
+    """Plot AdvProp training history"""
+    os.makedirs(save_plots_path, exist_ok=True)
+    
+    fig, axes = plt.subplots(2, 2, figsize=(15, 12))
+    
+    # Plot 1: Training Loss
+    axes[0, 0].plot(history["train_loss"], label="Total Loss", linewidth=2)
+    axes[0, 0].plot(history["val_loss"], label="Validation Loss", linewidth=2)
+    axes[0, 0].set_xlabel("Epoch")
+    axes[0, 0].set_ylabel("Loss")
+    axes[0, 0].set_title("Training and Validation Loss")
+    axes[0, 0].legend()
+    axes[0, 0].grid(True, alpha=0.3)
+    
+    # Plot 2: Training Accuracies
+    axes[0, 1].plot(history["train_acc_clean"], label="Clean Images", linewidth=2)
+    axes[0, 1].plot(history["train_acc_adv"], label="Adversarial Images", linewidth=2)
+    axes[0, 1].plot(history["val_acc"], label="Validation", linewidth=2)
+    axes[0, 1].set_xlabel("Epoch")
+    axes[0, 1].set_ylabel("Accuracy (%)")
+    axes[0, 1].set_title("Training and Validation Accuracy")
+    axes[0, 1].legend()
+    axes[0, 1].grid(True, alpha=0.3)
+    
+    # Plot 3: Clean vs Adversarial Training Accuracy
+    axes[1, 0].plot(history["train_acc_clean"], "b-", label="Clean Acc", linewidth=2)
+    axes[1, 0].set_xlabel("Epoch")
+    axes[1, 0].set_ylabel("Clean Accuracy (%)", color="b")
+    axes[1, 0].tick_params(axis="y", labelcolor="b")
+    
+    ax_twin = axes[1, 0].twinx()
+    ax_twin.plot(history["train_acc_adv"], "r-", label="Adv Acc", linewidth=2)
+    ax_twin.set_ylabel("Adversarial Accuracy (%)", color="r")
+    ax_twin.tick_params(axis="y", labelcolor="r")
+    
+    axes[1, 0].set_title("Clean vs Adversarial Training Accuracy")
+    lines1, labels1 = axes[1, 0].get_legend_handles_labels()
+    lines2, labels2 = ax_twin.get_legend_handles_labels()
+    axes[1, 0].legend(lines1 + lines2, labels1 + labels2, loc="upper right")
+    axes[1, 0].grid(True, alpha=0.3)
+    
+    # Plot 4: Accuracy Gap
+    gap = [clean - adv for clean, adv in zip(history["train_acc_clean"], history["train_acc_adv"])]
+    axes[1, 1].plot(gap, "g-", linewidth=2)
+    axes[1, 1].set_xlabel("Epoch")
+    axes[1, 1].set_ylabel("Accuracy Gap (%)")
+    axes[1, 1].set_title("Clean - Adversarial Accuracy Gap")
+    axes[1, 1].grid(True, alpha=0.3)
+    axes[1, 1].axhline(y=0, color='r', linestyle='--', alpha=0.5)
+    
+    plt.suptitle(f"{model_name} - AdvProp Training History", fontsize=16, fontweight="bold")
+    plt.tight_layout()
+    
+    # Save figure
+    filename = os.path.join(save_plots_path, f"{model_name}_advprop_training.png")
+    plt.savefig(filename, dpi=150, bbox_inches="tight")
+    print(f"AdvProp training history saved to: {filename}")
+    
+    plt.close(fig)
+
 
 def create_training_report(history, model_name, class_names, save_plots_path):
     """Create a comprehensive training report with multiple visualizations"""
@@ -403,3 +464,74 @@ def create_training_report(history, model_name, class_names, save_plots_path):
             )
 
     print(f"Comprehensive training report saved to: {report_filename}")
+
+
+def create_advprop_training_report(history, model_name, class_names, save_plots_path, epsilon=None):
+    """Create a comprehensive AdvProp training report"""
+    os.makedirs(save_plots_path, exist_ok=True)
+    
+    report_filename = os.path.join(save_plots_path, f"{model_name}_advprop_training_report.txt")
+    
+    with open(report_filename, "w") as f:
+        f.write("=" * 60 + "\n")
+        f.write("ADVPROP TRAINING REPORT\n")
+        f.write("=" * 60 + "\n\n")
+        
+        f.write(f"Model: {model_name}\n")
+        if epsilon is not None:
+            f.write(f"Epsilon: {epsilon}\n")
+            f.write(f"Alpha: {epsilon/4:.4f}\n")
+        f.write(f"Training Epochs: {len(history['train_loss'])}\n\n")
+        
+        f.write("FINAL METRICS:\n")
+        f.write("-" * 40 + "\n")
+        f.write(f"Final Training Loss: {history['train_loss'][-1]:.4f}\n")
+        
+        if 'train_acc_clean' in history:
+            f.write(f"Final Clean Training Accuracy: {history['train_acc_clean'][-1]:.2f}%\n")
+        if 'train_acc_adv' in history:
+            f.write(f"Final Adversarial Training Accuracy: {history['train_acc_adv'][-1]:.2f}%\n")
+        
+        f.write(f"Final Validation Accuracy: {history['val_acc'][-1]:.2f}%\n\n")
+        
+        f.write("BEST METRICS:\n")
+        f.write("-" * 40 + "\n")
+        f.write(f"Best Validation Accuracy: {max(history['val_acc']):.2f}%\n")
+        f.write(f"Best Epoch: {np.argmax(history['val_acc']) + 1}\n\n")
+        
+        # Accuracy Gap Analysis (spécifique à AdvProp)
+        if 'train_acc_clean' in history and 'train_acc_adv' in history:
+            f.write("ACCURACY GAP ANALYSIS:\n")
+            f.write("-" * 40 + "\n")
+            initial_gap = history['train_acc_clean'][0] - history['train_acc_adv'][0]
+            final_gap = history['train_acc_clean'][-1] - history['train_acc_adv'][-1]
+            f.write(f"Initial Clean-Adv Gap: {initial_gap:.2f}%\n")
+            f.write(f"Final Clean-Adv Gap: {final_gap:.2f}%\n")
+            f.write(f"Gap Reduction: {initial_gap - final_gap:.2f}%\n")
+            f.write(f"Adv/Clean Ratio: {history['train_acc_adv'][-1]/history['train_acc_clean'][-1]*100:.1f}%\n\n")
+        
+        # Training summary
+        f.write("TRAINING SUMMARY:\n")
+        f.write("-" * 40 + "\n")
+        f.write("Epoch | Train Loss | Val Loss | Train Acc Clean | Train Acc Adv | Val Acc\n")
+        f.write("-" * 80 + "\n")
+        
+        for epoch in range(len(history['train_loss'])):
+            line = f"{epoch+1:5d} | {history['train_loss'][epoch]:10.4f} | "
+            line += f"{history['val_loss'][epoch]:8.4f} | "
+            
+            if 'train_acc_clean' in history:
+                line += f"{history['train_acc_clean'][epoch]:15.2f} | "
+            else:
+                line += f"{'N/A':15} | "
+                
+            if 'train_acc_adv' in history:
+                line += f"{history['train_acc_adv'][epoch]:14.2f} | "
+            else:
+                line += f"{'N/A':14} | "
+                
+            line += f"{history['val_acc'][epoch]:7.2f}\n"
+            f.write(line)
+    
+    print(f"AdvProp training report saved to: {report_filename}")
+    return report_filename
