@@ -155,76 +155,6 @@ def visualize_predictions(model, data_loader, class_names, device, num_samples=1
     return batch_accuracy
 
 
-
-def plot_advprop_history(history, model_name="AdvProp Model"):
-    """Plot training history for AdvProp (different structure)"""
-    os.makedirs(SAVE_PLOTS_PATH, exist_ok=True)
-    
-    fig, axes = plt.subplots(2, 2, figsize=(15, 10))
-    
-    # Plot 1: Loss
-    axes[0, 0].plot(history['train_loss'], label='Train Loss', linewidth=2)
-    axes[0, 0].plot(history['val_loss'], label='Validation Loss', linewidth=2)
-    axes[0, 0].set_xlabel('Epoch', fontsize=12)
-    axes[0, 0].set_ylabel('Loss', fontsize=12)
-    axes[0, 0].set_title(f'{model_name} - Loss History', fontsize=14, fontweight='bold')
-    axes[0, 0].legend()
-    axes[0, 0].grid(True, alpha=0.3)
-    
-    # Plot 2: Clean Accuracy
-    axes[0, 1].plot(history['train_acc_clean'], label='Train Clean Acc', linewidth=2)
-    axes[0, 1].plot(history['train_acc_adv'], label='Train Adv Acc', linewidth=2, linestyle='--')
-    axes[0, 1].plot(history['val_acc'], label='Validation Acc', linewidth=2)
-    axes[0, 1].set_xlabel('Epoch', fontsize=12)
-    axes[0, 1].set_ylabel('Accuracy (%)', fontsize=12)
-    axes[0, 1].set_title(f'{model_name} - Accuracy History', fontsize=14, fontweight='bold')
-    axes[0, 1].legend()
-    axes[0, 1].grid(True, alpha=0.3)
-    
-    # Plot 3: Clean vs Adv Accuracy
-    axes[1, 0].plot(history['train_acc_clean'], label='Clean Accuracy', linewidth=2, color='blue')
-    axes[1, 0].plot(history['train_acc_adv'], label='Adv Accuracy', linewidth=2, color='red')
-    axes[1, 0].fill_between(range(len(history['train_acc_clean'])),
-                           history['train_acc_clean'], 
-                           history['train_acc_adv'],
-                           alpha=0.2, color='gray')
-    axes[1, 0].set_xlabel('Epoch', fontsize=12)
-    axes[1, 0].set_ylabel('Accuracy (%)', fontsize=12)
-    axes[1, 0].set_title(f'{model_name} - Clean vs Adv Accuracy Gap', fontsize=14, fontweight='bold')
-    axes[1, 0].legend()
-    axes[1, 0].grid(True, alpha=0.3)
-    
-    # Plot 4: Combined view
-    ax2 = axes[1, 1]
-    ax2_twin = ax2.twinx()
-    
-    line1, = ax2.plot(history['train_loss'], 'b-', label='Train Loss', linewidth=2)
-    line2, = ax2.plot(history['val_loss'], 'b--', label='Val Loss', linewidth=2)
-    ax2.set_xlabel('Epoch', fontsize=12)
-    ax2.set_ylabel('Loss', color='b', fontsize=12)
-    ax2.tick_params(axis='y', labelcolor='b')
-    
-    line3, = ax2_twin.plot(history['train_acc_clean'], 'r-', label='Clean Acc', linewidth=2)
-    line4, = ax2_twin.plot(history['val_acc'], 'r--', label='Val Acc', linewidth=2)
-    ax2_twin.set_ylabel('Accuracy (%)', color='r', fontsize=12)
-    ax2_twin.tick_params(axis='y', labelcolor='r')
-    
-    lines = [line1, line2, line3, line4]
-    labels = [line.get_label() for line in lines]
-    ax2.legend(lines, labels, loc='upper center', bbox_to_anchor=(0.5, -0.1), ncol=4)
-    ax2.set_title(f'{model_name} - Combined View', fontsize=14, fontweight='bold')
-    ax2.grid(True, alpha=0.3)
-    
-    plt.tight_layout()
-    
-    # Save
-    filename = os.path.join(SAVE_PLOTS_PATH, f'{model_name}_advprop_history.png')
-    plt.savefig(filename, dpi=150, bbox_inches='tight')
-    print(f"AdvProp history plot saved to: {filename}")
-    
-    plt.close(fig)
-
-
 def denormalize(tensor):
     """Denormalize tensor images for visualization"""
     tensor = tensor.clone()
@@ -404,26 +334,8 @@ def create_training_report(history, model_name, test_accuracy, class_names, y_tr
     """Create a comprehensive training report with multiple visualizations"""
     os.makedirs(SAVE_PLOTS_PATH, exist_ok=True)
     
-    # DÉTECTE si c'est AdvProp ou standard
-    is_advprop = 'train_acc_clean' in history
-    
     # Plot training history
-    if is_advprop:
-        # Utilise plot_advprop_history si disponible
-        try:
-            from .visualization import plot_advprop_history
-            plot_advprop_history(history, model_name)
-        except:
-            # Fallback: convert to standard format
-            std_history = {
-                'train_loss': history['train_loss'],
-                'val_loss': history['val_loss'],
-                'train_acc': history['train_acc_clean'],  # Utilise clean acc
-                'val_acc': history['val_acc']
-            }
-            plot_training_history(std_history, model_name)
-    else:
-        plot_training_history(history, model_name)
+    plot_training_history(history, model_name)
     
     # Save metrics to CSV
     save_training_metrics_to_csv(history, model_name)
@@ -438,35 +350,16 @@ def create_training_report(history, model_name, test_accuracy, class_names, y_tr
     with open(report_filename, 'w') as f:
         f.write(f"=== {model_name} Training Report ===\n\n")
         f.write(f"Model: {model_name}\n")
-        
-        # Gère AdvProp vs Standard
-        if is_advprop:
-            f.write(f"Final Training Accuracy (Clean): {history['train_acc_clean'][-1]:.2f}%\n")
-            f.write(f"Final Training Accuracy (Adv): {history['train_acc_adv'][-1]:.2f}%\n")
-        else:
-            f.write(f"Final Training Accuracy: {history['train_acc'][-1]:.2f}%\n")
-        
+        f.write(f"Final Training Accuracy: {history['train_acc'][-1]:.2f}%\n")
         f.write(f"Final Validation Accuracy: {history['val_acc'][-1]:.2f}%\n")
         f.write(f"Test Accuracy: {test_accuracy:.2f}%\n\n")
         
         f.write("Training History:\n")
-        
-        if is_advprop:
-            f.write("Epoch | Train Loss | Val Loss | Train Clean | Train Adv | Val Acc\n")
-            f.write("-" * 70 + "\n")
-            for epoch in range(len(history['train_loss'])):
-                f.write(f"{epoch+1:5d} | {history['train_loss'][epoch]:10.4f} | "
-                       f"{history['val_loss'][epoch]:8.4f} | "
-                       f"{history['train_acc_clean'][epoch]:9.2f} | "
-                       f"{history['train_acc_adv'][epoch]:8.2f} | "
-                       f"{history['val_acc'][epoch]:7.2f}\n")
-        else:
-            f.write("Epoch | Train Loss | Val Loss | Train Acc | Val Acc\n")
-            f.write("-" * 60 + "\n")
-            for epoch in range(len(history['train_loss'])):
-                f.write(f"{epoch+1:5d} | {history['train_loss'][epoch]:10.4f} | "
-                       f"{history['val_loss'][epoch]:8.4f} | "
-                       f"{history['train_acc'][epoch]:9.2f} | "
-                       f"{history['val_acc'][epoch]:7.2f}\n")
+        f.write("Epoch | Train Loss | Val Loss | Train Acc | Val Acc\n")
+        f.write("-" * 60 + "\n")
+        for epoch in range(len(history['train_loss'])):
+            f.write(f"{epoch+1:5d} | {history['train_loss'][epoch]:10.4f} | "
+                   f"{history['val_loss'][epoch]:8.4f} | {history['train_acc'][epoch]:9.2f} | "
+                   f"{history['val_acc'][epoch]:7.2f}\n")
     
     print(f"Comprehensive training report saved to: {report_filename}")

@@ -10,23 +10,16 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from config import *
 from models import create_simple_cnn, ResNet18
-# AJOUTER ces imports
-from models.resnet_with_advprop import ResNet18AdvProp
-from train.advprop_trainer import AdvPropTrainer
-
 from train.trainer import ModelTrainer, create_data_loaders
-from utils.visualization import plot_training_history, visualize_predictions, create_training_report, plot_sample_images
+from utils.visualization import plot_training_history, visualize_predictions, plot_training_history, create_training_report, plot_sample_images
 
 
 def parse_args():
     """Parse command line arguments"""
     parser = argparse.ArgumentParser(description='EuroSat Adversarial Robustness Project')
-    
-    # MODIFIER les choix du modèle
     parser.add_argument('--model', type=str, default='simple_cnn',
-                       choices=['simple_cnn', 'resnet18', 'resnet18_advprop'],  # AJOUTER
+                       choices=['simple_cnn', 'resnet18'],
                        help='Model architecture to use')
-    
     parser.add_argument('--epochs', type=int, default=EPOCHS,
                        help='Number of training epochs')
     parser.add_argument('--batch-size', type=int, default=BATCH_SIZE,
@@ -41,20 +34,6 @@ def parse_args():
                        help='Evaluate the model')
     parser.add_argument('--visualize', action='store_true',
                        help='Visualize predictions')
-    
-    # NOUVEAUX ARGUMENTS pour AdvProp
-    parser.add_argument('--advprop', action='store_true',
-                       help='Use AdvProp training method')
-    parser.add_argument('--epsilon', type=float, default=0.03,
-                       help='Perturbation strength for adversarial training')
-    parser.add_argument('--pgd-iter', type=int, default=7,
-                       help='PGD iterations for AdvProp')
-
-    parser.add_argument('--alpha', type=float, default=None,
-                       help='Step size for PGD (default: epsilon/3)')
-    parser.add_argument('--save-name', type=str, default=None,
-                       help='Custom name for saved model')
-    
     return parser.parse_args()
 
 
@@ -76,36 +55,21 @@ def main():
         batch_size=args.batch_size
     )
     
-    # Create model - MODIFIER cette section
+    # Create model
     print(f"\nCreating {args.model} model...")
     if args.model == 'simple_cnn':
         model = create_simple_cnn(num_classes=len(class_names))
     elif args.model == 'resnet18':
         model = ResNet18(num_classes=len(class_names))
-    elif args.model == 'resnet18_advprop':
-        model = ResNet18AdvProp(num_classes=len(class_names))
     
     print(f"Model parameters: {sum(p.numel() for p in model.parameters()):,}")
     
-    # Create trainer - MODIFIER selon le modèle/méthode
-    if args.advprop or args.model == 'resnet18_advprop':
-        print(f"Using AdvProp trainer (ε={args.epsilon}, iter={args.pgd_iter})")
-        trainer = AdvPropTrainer(
-            model=model,
-            epsilon=args.epsilon,
-            alpha=args.epsilon/3,  # Standard ratio
-            iterations=args.pgd_iter,
-            device=DEVICE
-        )
-    else:
-        print("Using standard trainer")
-        trainer = ModelTrainer(model, device=DEVICE)
+    # Create trainer
+    trainer = ModelTrainer(model, device=DEVICE)
     
     # Train model
     if args.train:
         print(f"\nTraining {args.model} for {args.epochs} epochs...")
-        
-        # Utiliser la méthode train appropriée
         history = trainer.train(
             train_loader, val_loader,
             epochs=args.epochs,
@@ -113,26 +77,18 @@ def main():
         )
         
         # Plot training history
-        model_name = args.model
-        if args.advprop or args.model == 'resnet18_advprop':
-            model_name += "_AdvProp"
-        if args.advprop or args.model == 'resnet18_advprop':
-            from utils.visualization import plot_advprop_history
-            plot_advprop_history(history, model_name=model_name)
-        else:
-            plot_training_history(history, model_name=model_name)
+        plot_training_history(history, model_name=args.model)
         
         # Save final model
-        trainer.save_model(f'{model_name}_final.pth')
+        trainer.save_model(f'{args.model}_final.pth')
 
         # Evaluate on test set
         test_accuracy, predictions, true_labels = trainer.evaluate(test_loader)
-        print(f"Test Accuracy: {test_accuracy:.2f}%")
         
         # Create comprehensive report
         create_training_report(
             history=history,
-            model_name=model_name,
+            model_name=args.model,
             test_accuracy=test_accuracy,
             class_names=class_names,
             y_true=true_labels,
@@ -144,39 +100,26 @@ def main():
         print("\nEvaluating model on test set...")
         
         # Load best model if exists
-        model_name = args.model
-        if args.advprop or args.model == 'resnet18_advprop':
-            model_name += "_AdvProp"
-            
-        model_path = os.path.join(SAVE_MODEL_PATH, f'best_model{"" if args.model == "resnet18_advprop" else ""}.pth')
+        model_path = os.path.join(SAVE_MODEL_PATH, 'best_model.pth')
         if os.path.exists(model_path):
-            trainer.load_model(os.path.basename(model_path))
-            print(f"Loaded best model from {model_path}")
-        else:
-            # Essayer le modèle final
-            model_path = os.path.join(SAVE_MODEL_PATH, f'{model_name}_final.pth')
-            if os.path.exists(model_path):
-                checkpoint = torch.load(model_path, map_location=DEVICE)
-                trainer.model.load_state_dict(checkpoint['model_state_dict'])
-                print(f"Loaded final model from {model_path}")
+            trainer.load_model('best_model.pth')
+            print("Loaded best model for evaluation")
         
         accuracy, predictions, true_labels = trainer.evaluate(test_loader)
         print(f"Test Accuracy: {accuracy:.2f}%")
+        
+        # You can add confusion matrix here if needed
+        # from utils.visualization import plot_confusion_matrix
+        # plot_confusion_matrix(true_labels, predictions, class_names)
     
     # Visualize predictions
     if args.visualize:
         print("\nVisualizing predictions...")
         
-        # Load model if needed
-        model_name = args.model
-        if args.advprop or args.model == 'resnet18_advprop':
-            model_name += "_AdvProp"
-            
-        model_path = os.path.join(SAVE_MODEL_PATH, f'{model_name}_final.pth')
+        # Load best model if exists
+        model_path = os.path.join(SAVE_MODEL_PATH, 'best_model.pth')
         if os.path.exists(model_path):
-            checkpoint = torch.load(model_path, map_location=DEVICE)
-            trainer.model.load_state_dict(checkpoint['model_state_dict'])
-            print(f"Loaded model from {model_path}")
+            trainer.load_model('best_model.pth')
         
         visualize_predictions(
             trainer.model, test_loader, class_names, DEVICE

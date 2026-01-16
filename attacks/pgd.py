@@ -54,8 +54,6 @@ class PGD(BaseAttack):
         for i in range(self.iterations):
            
             adversarial_images.requires_grad = True
-            was_training = self.model.training
-            self.model.train()
             outputs = self.model(adversarial_images)
             
             if self.targeted:
@@ -85,7 +83,9 @@ class PGD(BaseAttack):
                 adversarial_images = images + delta
                 
                 
-                adversarial_images = torch.clamp(adversarial_images,0,1)
+                adversarial_images = torch.clamp(adversarial_images, 
+                                                 images.min(), 
+                                                 images.max())
             
             adversarial_images = adversarial_images.detach()
         
