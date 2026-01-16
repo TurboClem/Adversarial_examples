@@ -1,2 +1,6 @@
 data/
-datasets/
+datasets/__pycache__/
+datasets/EuroSAT_RGB/
+
+.pyc
+__pycache__/
