@@ -74,4 +74,4 @@ def save_statistics_to_config(mean, std, config_file_path="config.py"):
 
 if __name__ == "__main__":
     mean, std = compute_stats()
-    save_statistics_to_config(mean, std, config_file_path="config.py")
+    # save_statistics_to_config(mean, std, config_file_path="config.py")
