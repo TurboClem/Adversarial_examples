@@ -29,5 +29,5 @@ SAVE_MODEL_PATH = "outputs/models/"
 SAVE_PLOTS_PATH = "outputs/plots/"
 
 # Data transforms
-MEAN = [0.485, 0.456, 0.406]
-STD = [0.229, 0.224, 0.225]
+MEAN = [0.34467610716819763, 0.38059931993484497, 0.40795162320137024]  # Computed on train set
+STD = [0.09143105149269104, 0.06515812873840332, 0.055277884006500244]  # Computed on train set
