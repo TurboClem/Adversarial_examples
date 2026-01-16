@@ -125,11 +125,7 @@ class ResultCollector:
     def auto_collect_experiment(self, experiment_name, model_dir, plots_dir):
         """
         Automatically collect results from experiment directories
-        
-        Args:
-            experiment_name: Name for this experiment
-            model_dir: Path to model outputs (e.g., 'outputs/models/baseline')
-            plots_dir: Path to plot outputs (e.g., 'outputs/plots/baseline')
+        UPDATED for new directory structure with subdirectories
         """
         print(f"Collecting results for {experiment_name}...")
         
@@ -159,128 +155,186 @@ class ResultCollector:
                 if match:
                     config[key] = float(match.group(1))
         
-        # Try to get test accuracy from evaluation
-        #test_log = os.path.join(plots_dir, 'test_evaluation.log')
-        #if os.path.exists(test_log):
-        #    test_acc = self.get_test_accuracy(test_log)
-        #    if test_acc:
-        #        config['Clean Test Acc'] = test_acc
-
-        # 1. Try to extract from NEW evaluation log
-        eval_log = os.path.join(plots_dir, 'evaluation.log')
-        if os.path.exists(eval_log):
-            print(f"  Found evaluation log: {eval_log}")
-            eval_metrics = self.extract_from_evaluation_log(eval_log)
-            config.update(eval_metrics)
+        # 1. FIRST: Look for CLEAN test evaluation (test_clean subdirectory)
+        clean_eval_dir = os.path.join(plots_dir, 'test_clean')
+        clean_eval_log = os.path.join(clean_eval_dir, 'evaluation.log')
+        
+        if os.path.exists(clean_eval_log):
+            print(f"  Found clean evaluation log: {clean_eval_log}")
+            clean_metrics = self.extract_from_evaluation_log(clean_eval_log)
+            if 'Clean Test Acc' in clean_metrics:
+                config['Clean Test Acc'] = clean_metrics['Clean Test Acc']
         else:
-            print(f"  No evaluation.log found at: {eval_log}")
-            # Try alternative names
-            alt_logs = ['test_evaluation.log', 'eval.log', 'evaluation_results.log']
-            for alt_log in alt_logs:
-                alt_path = os.path.join(plots_dir, alt_log)
-                if os.path.exists(alt_path):
-                    print(f"  Found alternative log: {alt_path}")
-                    eval_metrics = self.extract_from_evaluation_log(alt_path)
-                    config.update(eval_metrics)
-                    break
+            # Fallback: look in main directory
+            main_eval_log = os.path.join(plots_dir, 'evaluation.log')
+            if os.path.exists(main_eval_log):
+                print(f"  Found evaluation log in main dir: {main_eval_log}")
+                clean_metrics = self.extract_from_evaluation_log(main_eval_log)
+                if 'Clean Test Acc' in clean_metrics:
+                    config['Clean Test Acc'] = clean_metrics['Clean Test Acc']
         
-        # Try to get adversarial accuracy
-        #adv_test_log = os.path.join(plots_dir, 'test_pgd_eps002', 'test_evaluation.log')
-        #if os.path.exists(adv_test_log):
-        #    adv_acc = self.get_adversarial_accuracy(adv_test_log)
-        #    if adv_acc:
-        #        config['Adv Test Acc'] = adv_acc
-        #        
-        #        # Calculate accuracy drop
-        #        if 'Clean Test Acc' in config:
-        #            config['Adv Acc Drop'] = config['Clean Test Acc'] - adv_acc
-
-
-        # Look for ADVERSARIAL evaluation (PGD attacked test)
-        # Check if there's a subdirectory with adversarial test results
-        adv_dirs_to_check = [
-            os.path.join(plots_dir, 'test_pgd_eps002'),
-            os.path.join(plots_dir, 'adv_evaluation'),
-            os.path.join(plots_dir, 'adversarial_test'),
-            os.path.join(os.path.dirname(plots_dir), f'{experiment_name}_adv'),  # sibling directory
-        ]
-    
-        for adv_dir in adv_dirs_to_check:
-            if os.path.exists(adv_dir):
-                print(f"  Checking adversarial directory: {adv_dir}")
-                
-                # Look for evaluation logs in this directory
-                adv_logs_to_check = [
-                    os.path.join(adv_dir, 'evaluation.log'),
-                    os.path.join(adv_dir, 'test_evaluation.log'),
-                    os.path.join(adv_dir, 'adv_evaluation.log'),
-                ]
-                
-                for adv_log_path in adv_logs_to_check:
-                    if os.path.exists(adv_log_path):
-                        print(f"    Found adversarial log: {adv_log_path}")
-                        adv_acc = self.extract_from_evaluation_log(adv_log_path).get('Clean Test Acc')
-                        if adv_acc:
-                            config['Adv Test Acc'] = adv_acc
-                            
-                            # Calculate accuracy drop
-                            if 'Clean Test Acc' in config:
-                                config['Adv Acc Drop'] = config['Clean Test Acc'] - adv_acc
+        # 2. SECOND: Look for ADVERSARIAL test evaluation
+        # For non-robust experiments, adversarial test is on 'test_{model_name}'
+        # For baseline/madry, adversarial test is on 'test_pgd_eps002'
+        
+        adv_acc_found = False
+        
+        # Option A: For non-robust models, look for test on adversarial version of themselves
+        if 'nonrobust' in experiment_name or 'random' in experiment_name:
+            adv_test_dir_name = f'test_{experiment_name}'
+            adv_eval_dir = os.path.join(plots_dir, adv_test_dir_name)
+            adv_eval_log = os.path.join(adv_eval_dir, 'evaluation.log')
+            
+            if os.path.exists(adv_eval_log):
+                print(f"  Found self-adversarial evaluation: {adv_eval_log}")
+                adv_metrics = self.extract_from_evaluation_log(adv_eval_log)
+                if 'Clean Test Acc' in adv_metrics:
+                    config['Adv Test Acc'] = adv_metrics['Clean Test Acc']
+                    adv_acc_found = True
+        
+        # Option B: For all models, also look for PGD attacked test
+        if not adv_acc_found:
+            pgd_test_dir = os.path.join(plots_dir, 'test_pgd_eps002')
+            pgd_eval_log = os.path.join(pgd_test_dir, 'evaluation.log')
+            
+            if os.path.exists(pgd_eval_log):
+                print(f"  Found PGD adversarial evaluation: {pgd_eval_log}")
+                pgd_metrics = self.extract_from_evaluation_log(pgd_eval_log)
+                if 'Clean Test Acc' in pgd_metrics:
+                    config['Adv Test Acc'] = pgd_metrics['Clean Test Acc']
+                    adv_acc_found = True
+        
+        # Option C: Look for any subdirectory with 'test_' prefix
+        if not adv_acc_found:
+            import glob
+            test_subdirs = glob.glob(os.path.join(plots_dir, 'test_*'))
+            
+            for test_dir in test_subdirs:
+                if os.path.isdir(test_dir) and 'clean' not in test_dir.lower():
+                    adv_log = os.path.join(test_dir, 'evaluation.log')
+                    if os.path.exists(adv_log):
+                        print(f"  Found test in {os.path.basename(test_dir)}: {adv_log}")
+                        adv_metrics = self.extract_from_evaluation_log(adv_log)
+                        if 'Clean Test Acc' in adv_metrics:
+                            config['Adv Test Acc'] = adv_metrics['Clean Test Acc']
+                            adv_acc_found = True
                             break
-                if 'Adv Test Acc' in config:
-                    break
         
-        # Extract from model checkpoint
+        # Calculate accuracy drop if both exist
+        if 'Clean Test Acc' in config and 'Adv Test Acc' in config:
+            config['Adv Acc Drop'] = config['Clean Test Acc'] - config['Adv Test Acc']
+        
+        # 3. Extract from model checkpoint for training metrics
         model_path = os.path.join(model_dir, 'best_model.pth')
         checkpoint_metrics = self.extract_from_model_checkpoint(model_path)
         config.update(checkpoint_metrics)
         
-        # Add dataset info if available
-        dataset_config = os.path.join(model_dir.replace('models', 'datasets'), 'dataset_config.json')
-        if os.path.exists(dataset_config):
-            with open(dataset_config, 'r') as f:
-                dataset_info = json.load(f)
-            config['dataset_info'] = dataset_info
+        # 4. Add dataset info if available
+        # Look for dataset config in multiple locations
+        possible_config_paths = [
+            os.path.join(model_dir.replace('models', 'datasets'), 'dataset_config.json'),
+            os.path.join('datasets/EuroSAT_RGB', f'train_{experiment_name}_config', 'dataset_config.json'),
+            os.path.join('datasets/EuroSAT_RGB', f'{experiment_name}_config', 'dataset_config.json'),
+        ]
+        
+        for config_path in possible_config_paths:
+            if os.path.exists(config_path):
+                try:
+                    with open(config_path, 'r') as f:
+                        dataset_info = json.load(f)
+                    config['dataset_info'] = dataset_info
+                    print(f"  Found dataset config: {config_path}")
+                    break
+                except Exception as e:
+                    print(f"  Warning: Could not load config {config_path}: {e}")
+        
+        # 5. Set dataset type and attack type
+        if 'dataset_info' in config:
+            config['Dataset Type'] = config['dataset_info'].get('dataset_type', 'clean')
+            config['Attack Type'] = config['dataset_info'].get('attack_type', 'none')
+            config['Epsilon'] = config['dataset_info'].get('epsilon', 0)
+        else:
+            # Infer from experiment name
+            if 'nonrobust' in experiment_name:
+                config['Dataset Type'] = 'non_robust'
+                config['Attack Type'] = 'fgsm' if 'fgsm' in experiment_name else 'pgd'
+                config['Epsilon'] = 0.01  # Default from your code
+            elif 'random' in experiment_name:
+                config['Dataset Type'] = 'random_noise'
+                config['Attack Type'] = 'random'
+                config['Epsilon'] = 0.01
+            elif 'madry' in experiment_name:
+                config['Dataset Type'] = 'adversarial_training'
+                config['Attack Type'] = 'pgd'
+                if 'eps001' in experiment_name:
+                    config['Epsilon'] = 0.01
+                elif 'eps003' in experiment_name:
+                    config['Epsilon'] = 0.03
+                else:
+                    config['Epsilon'] = 0.01  # Default
+            else:
+                config['Dataset Type'] = 'clean'
+                config['Attack Type'] = 'none'
+                config['Epsilon'] = 0.0
         
         # Save the collected results
         self.add_experiment_result(experiment_name, config)
         
-        print(f"  → Collected {len(config)} metrics")
+        # Print summary
+        summary = f"  → Collected {len(config)} metrics"
+        if 'Clean Test Acc' in config:
+            summary += f", Clean: {config['Clean Test Acc']}%"
+        if 'Adv Test Acc' in config:
+            summary += f", Adv: {config['Adv Test Acc']}%"
+        print(summary)
+        
         return config
-    
+
     def save_results(self):
         """Save results to JSON file"""
         with open(self.results_file, 'w') as f:
             json.dump(self.results, f, indent=4, default=str)
     
     def get_dataframe(self):
-        """Convert results to pandas DataFrame"""
+        """Convert results to pandas DataFrame - IMPROVED"""
         rows = []
         
         for exp_name, config in self.results.items():
             row = {'Experiment': exp_name}
             
-            # Extract key metrics
-            metrics = [
-                'Train Acc', 'Val Acc', 'Best Val Acc', 
-                'Clean Test Acc', 'Adv Test Acc', 'Adv Acc Drop'
-            ]
+            # Extract key metrics with better handling
+            metrics_mapping = {
+                'Train Acc': ['Train Acc', 'Final Train Acc'],
+                'Val Acc': ['Val Acc', 'Final Val Acc'],
+                'Best Val Acc': ['Best Val Acc'],
+                'Clean Test Acc': ['Clean Test Acc', 'Test Acc'],
+                'Adv Test Acc': ['Adv Test Acc'],
+                'Adv Acc Drop': ['Adv Acc Drop'],
+            }
             
-            for metric in metrics:
-                if metric in config:
-                    row[metric] = config[metric]
-                else:
-                    row[metric] = None
+            for display_name, possible_keys in metrics_mapping.items():
+                value = None
+                for key in possible_keys:
+                    if key in config and config[key] is not None:
+                        # Handle different formats
+                        if isinstance(config[key], (int, float)):
+                            value = float(config[key])
+                        elif isinstance(config[key], str):
+                            # Try to extract number from string like "9.44%"
+                            num_match = re.search(r'([\d\.]+)', config[key])
+                            if num_match:
+                                value = float(num_match.group(1))
+                        if value is not None:
+                            break
+                row[display_name] = value
             
-            # Add dataset type if available
-            if 'dataset_info' in config:
-                row['Dataset Type'] = config['dataset_info'].get('dataset_type', 'clean')
-                row['Attack Type'] = config['dataset_info'].get('attack_type', 'none')
-                row['Epsilon'] = config['dataset_info'].get('epsilon', 0)
-            else:
-                row['Dataset Type'] = 'clean'
-                row['Attack Type'] = 'none'
-                row['Epsilon'] = 0
+            # Add dataset info - use direct config if available
+            row['Dataset Type'] = config.get('Dataset Type', 
+                                            config.get('dataset_info', {}).get('dataset_type', 'clean'))
+            row['Attack Type'] = config.get('Attack Type',
+                                        config.get('dataset_info', {}).get('attack_type', 'none'))
+            row['Epsilon'] = config.get('Epsilon',
+                                    config.get('dataset_info', {}).get('epsilon', 0))
             
             rows.append(row)
         
@@ -295,7 +349,7 @@ class ResultCollector:
         other_cols = [c for c in df.columns if c not in col_order]
         
         return df[existing_cols + other_cols]
-    
+
     def generate_summary_table(self):
         """Generate a formatted summary table"""
         df = self.get_dataframe()

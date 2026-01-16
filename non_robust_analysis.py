@@ -4,6 +4,7 @@ from models import ResNet18
 from datasets.feature_analysis import FeatureAnalysisDatasetGenerator
 import sys
 import json
+import pandas as pd
 # %%
 # Load the baseline model (your 97.56% accuracy model)
 model_path = 'outputs/models/baseline/best_model.pth'
@@ -88,7 +89,7 @@ def evaluate(model_name: str, adv: bool):
         "--seed", "42",
         "--data-path-eval", f"datasets/EuroSAT_RGB/{test_name}",
         "--save-model-path", f"outputs/models/{model_name}",
-        "--save-plots-path", f"outputs/plots/{model_name}",
+        "--save-plots-path", f"outputs/plots/{model_name}/{test_name}",
     ]
 
     from main import main
@@ -174,22 +175,32 @@ print("\n" + "="*80)
 print("FINAL EXPERIMENT REPORT")
 print("="*80)
 
+
+def safe_float(value):
+    """Safely convert value to float, handling 'N/A' and percentages"""
+    if pd.isnull(value) or value == "N/A" or value == "":
+        return None
+    # Remove % sign if present
+    if isinstance(value, str):
+        value = value.replace('%', '')
+    try:
+        return float(value)
+    except:
+        return None
+
+
 # Calculate key metrics
-baseline_acc = df_results[df_results['Experiment'] == 'baseline']['Clean Test Acc'].values[0]
-nonrobust_acc = df_results[df_results['Experiment'] == 'nonrobust_fgsm']['Clean Test Acc'].values[0]
-random_acc = df_results[df_results['Experiment'] == 'random_noise']['Clean Test Acc'].values[0]
+baseline_acc = safe_float(df_results[df_results['Experiment'] == 'baseline']['Clean Test Acc'].values[0])
+nonrobust_acc = safe_float(df_results[df_results['Experiment'] == 'nonrobust_fgsm']['Clean Test Acc'].values[0])
+random_acc = safe_float(df_results[df_results['Experiment'] == 'random_noise']['Clean Test Acc'].values[0])
 
 print(baseline_acc, nonrobust_acc, random_acc)
 
 print("\nKey Results:")
-#print(f"1_ Baseline (clean training): {baseline_acc:.2f}%")
-#print(f"2_ Non-Robust Dataset (FGSM): {nonrobust_acc:.2f}%")
-#print(f"3_ Random Noise Dataset: {random_acc:.2f}%")
-#print(f"4_ Difference (Non-Robust vs Random): {nonrobust_acc - random_acc:.2f}% points")
 print(f"1_ Baseline (clean training): {baseline_acc}%")
 print(f"2_ Non-Robust Dataset (FGSM): {nonrobust_acc}%")
 print(f"3_ Random Noise Dataset: {random_acc}%")
-print(f"4_ Difference (Non-Robust vs Random): {float(nonrobust_acc) - float(random_acc):.2f}% points")
+print(f"4_ Difference (Non-Robust vs Random): {nonrobust_acc - random_acc}% points")
 
 if nonrobust_acc > random_acc + 15:
     print("\nSTRONG EVIDENCE: Adversarial perturbations contain predictive features!")

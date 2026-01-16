@@ -230,92 +230,6 @@ class FeatureAnalysisDatasetGenerator:
         return save_dir
 
 
-def create_feature_analysis_summary_(results:list):
-    """
-    Create summary table and plots for feature analysis experiments
-    Args:
-        results : list of dictionary such as :
-            {
-            'Dataset': 'Clean',
-            'Model': 'ResNet18',
-            'Train Acc': 99.55,
-            'Clean Test Acc': 97.57,
-            'Adv Test Acc': 11.20,
-            'Adv Acc Drop': 86.37
-            }
-    """
-    
-    # Collect results from different experiments
-    results = []
-    
-    # Create DataFrame
-    df = pd.DataFrame(results)
-    
-    # Create visualization
-    fig, axes = plt.subplots(2, 2, figsize=(14, 10))
-    
-    # Plot 1: Accuracy comparison
-    ax = axes[0, 0]
-    x = np.arange(len(df))
-    width = 0.35
-    
-    ax.bar(x - width/2, df['Clean Test Acc'], width, label='Clean', color='skyblue')
-    ax.bar(x + width/2, df['Adv Test Acc'], width, label='Adversarial', color='lightcoral')
-    ax.set_xlabel('Training Method')
-    ax.set_ylabel('Accuracy (%)')
-    ax.set_title('Clean vs Adversarial Test Accuracy')
-    ax.set_xticks(x)
-    ax.set_xticklabels(df['Dataset'], rotation=45, ha='right')
-    ax.legend()
-    ax.grid(True, alpha=0.3)
-    
-    # Plot 2: Accuracy drop
-    ax = axes[0, 1]
-    ax.bar(df['Dataset'], df['Adv Acc Drop'], color='orange')
-    ax.set_xlabel('Training Method')
-    ax.set_ylabel('Accuracy Drop (%)')
-    ax.set_title('Adversarial Vulnerability (Accuracy Drop)')
-    ax.set_xticklabels(df['Dataset'], rotation=45, ha='right')
-    ax.grid(True, alpha=0.3)
-    
-    # Plot 3: Training accuracy
-    ax = axes[1, 0]
-    ax.bar(df['Dataset'], df['Train Acc'], color='green')
-    ax.set_xlabel('Training Method')
-    ax.set_ylabel('Training Accuracy (%)')
-    ax.set_title('Final Training Accuracy')
-    ax.set_xticklabels(df['Dataset'], rotation=45, ha='right')
-    ax.grid(True, alpha=0.3)
-    
-    # Plot 4: Summary table
-    ax = axes[1, 1]
-    ax.axis('tight')
-    ax.axis('off')
-    table_data = df[['Dataset', 'Clean Test Acc', 'Adv Test Acc', 'Adv Acc Drop']].round(2)
-    table = ax.table(cellText=table_data.values,
-                     colLabels=table_data.columns,
-                     cellLoc='center',
-                     loc='center',
-                     colWidths=[0.25, 0.25, 0.25, 0.25])
-    table.auto_set_font_size(False)
-    table.set_fontsize(10)
-    ax.set_title('Experiment Results Summary')
-    
-    plt.tight_layout()
-    plt.savefig('outputs/plots/feature_analysis_summary.png', dpi=150, bbox_inches='tight')
-    plt.show()
-    
-    # Save results to CSV
-    df.to_csv('outputs/results/feature_analysis_results.csv', index=False)
-    
-    print("\n" + "="*80)
-    print("FEATURE ANALYSIS EXPERIMENTS SUMMARY")
-    print("="*80)
-    print(df.to_string(index=False))
-    
-    return df
-
-
 def create_feature_analysis_summary(results_file='outputs/results/experiment_results.json'):
     """Create summary table and plots from collected results"""
     
@@ -360,6 +274,9 @@ def create_feature_analysis_summary(results_file='outputs/results/experiment_res
         rows.append(row)
     
     df = pd.DataFrame(rows)
+
+    if df.empty:
+        print("results_data seems empty")
     
     # Sort for better visualization
     order = ['Baseline', 'Adversarial Training', 'Non-Robust', 'Random Noise', 'Other']
@@ -452,40 +369,65 @@ def create_feature_analysis_summary(results_file='outputs/results/experiment_res
     key_experiments = ['baseline', 'nonrobust_fgsm', 'nonrobust_pgd', 'random_noise']
     key_df = df[df['Dataset'].isin(key_experiments)].copy()
     
-    if len(key_df) >= 3:  # At least baseline, non-robust, and random noise
+    if len(key_df) >= 2:  # At least 2 experiments to compare
         x_key = np.arange(len(key_df))
         width_key = 0.25
         
-        metrics = ['Clean Test Acc', 'Adv Test Acc', 'Train Acc']
-        colors_key = ['#3498db', '#e74c3c', '#2ecc71']
-        labels_key = ['Clean Test', 'Adv Test', 'Train']
+        # Only use metrics that exist in the DataFrame
+        available_metrics = []
+        available_colors = []
+        available_labels = []
         
-        for i, (metric, color, label) in enumerate(zip(metrics, colors_key, labels_key)):
-            values = []
-            for exp in key_experiments:
-                if exp in key_df['Dataset'].values:
-                    values.append(key_df[key_df['Dataset'] == exp][metric].values[0])
-                else:
-                    values.append(np.nan)
-            
-            bars = ax.bar(x_key + (i-1)*width_key, values, width_key, 
-                         color=color, alpha=0.8, label=label)
-            
-            # Add value labels
-            for bar, val in zip(bars, values):
-                if pd.notnull(val):
-                    ax.text(bar.get_x() + bar.get_width()/2., val + 1,
-                           f'{val:.1f}', ha='center', va='bottom', fontsize=9)
+        metric_configs = [
+            ('Clean Test Acc', '#3498db', 'Clean Test'),
+            ('Adv Test Acc', '#e74c3c', 'Adv Test'),
+            ('Train Acc', '#2ecc71', 'Train')
+        ]
         
-        ax.set_xlabel('Experiment', fontsize=12)
-        ax.set_ylabel('Accuracy (%)', fontsize=12)
-        ax.set_title('Key Ilyas et al. Comparison\n(Non-Robust > Random Noise proves features exist)', 
-                    fontsize=14, fontweight='bold')
-        ax.set_xticks(x_key)
-        ax.set_xticklabels(key_df['Dataset'], fontsize=10)
-        ax.legend(loc='upper right')
-        ax.grid(True, alpha=0.3)
-        ax.set_ylim(0, 105)
+        for metric, color, label in metric_configs:
+            if metric in key_df.columns and key_df[metric].notna().any():
+                available_metrics.append(metric)
+                available_colors.append(color)
+                available_labels.append(label)
+        
+        if available_metrics:  # Only plot if we have data
+            for i, (metric, color, label) in enumerate(zip(available_metrics, available_colors, available_labels)):
+                # Get values for this metric
+                values = key_df[metric].values
+                
+                # Calculate position offset
+                offset = (i - (len(available_metrics)-1)/2) * width_key
+                
+                bars = ax.bar(x_key + offset, values, width_key, 
+                             color=color, alpha=0.8, label=label)
+                
+                # Add value labels
+                for bar, val in zip(bars, values):
+                    if pd.notnull(val):
+                        ax.text(bar.get_x() + bar.get_width()/2., val + 1,
+                               f'{val:.1f}', ha='center', va='bottom', fontsize=9)
+            
+            ax.set_xlabel('Experiment', fontsize=12)
+            ax.set_ylabel('Accuracy (%)', fontsize=12)
+            ax.set_title('Key Ilyas et al. Comparison\n(Non-Robust > Random Noise proves features exist)', 
+                        fontsize=14, fontweight='bold')
+            ax.set_xticks(x_key)
+            ax.set_xticklabels(key_df['Dataset'], fontsize=10)
+            ax.legend(loc='upper right')
+            ax.grid(True, alpha=0.3)
+            ax.set_ylim(0, 105)
+        else:
+            # No data available
+            ax.text(0.5, 0.5, 'No metric data available\nfor selected experiments', 
+                   ha='center', va='center', transform=ax.transAxes, fontsize=12)
+            ax.set_title('Key Comparison\n(No data)', fontsize=14, fontweight='bold')
+            ax.axis('off')
+    else:
+        # Not enough experiments
+        ax.text(0.5, 0.5, f'Insufficient experiments\nNeed at least 2, have {len(key_df)}', 
+               ha='center', va='center', transform=ax.transAxes, fontsize=12)
+        ax.set_title('Key Comparison\n(Need more experiments)', fontsize=14, fontweight='bold')
+        ax.axis('off')
     
     plt.tight_layout()
     
@@ -531,63 +473,6 @@ def create_feature_analysis_summary(results_file='outputs/results/experiment_res
     print(f"\nDetailed results saved to: {csv_path}")
     
     return df
-
-
-def visualize_non_robust_features_(model_path, test_loader, device):
-    """Visualize what the non-robust model has learned"""
-    import torch
-    import torch.nn.functional as F
-    
-    args = parse_args()
-    if args.model == "resnet18":
-        model = ResNet18()
-    else:
-        print("Which model?")
-
-    # Load non-robust model
-    model = ResNet18().to(device)
-    checkpoint = torch.load(model_path, map_location=device)
-    model.load_state_dict(checkpoint['model_state_dict'])
-    model.eval()
-    
-    # Get a batch of clean test images
-    images, labels = next(iter(test_loader))
-    images, labels = images.to(device), labels.to(device)
-    
-    # Get model's predictions and confidence
-    with torch.no_grad():
-        outputs = model(images)
-        probabilities = F.softmax(outputs, dim=1)
-        confidences, predictions = torch.max(probabilities, dim=1)
-    
-    # Visualize predictions
-    fig, axes = plt.subplots(4, 4, figsize=(12, 12))
-    axes = axes.ravel()
-    
-    for i in range(min(16, len(images))):
-        # Denormalize image
-        img = images[i].cpu().permute(1, 2, 0).numpy()
-        img = img * np.array(STD) + np.array(MEAN)
-        img = np.clip(img, 0, 1)
-        
-        axes[i].imshow(img)
-        axes[i].set_title(f"True: {labels[i].item()}\nPred: {predictions[i].item()}\nConf: {confidences[i].item():.3f}")
-        axes[i].axis('off')
-        
-        # Color code based on correctness
-        if predictions[i] == labels[i]:
-            axes[i].set_frame_on(True)
-            axes[i].patch.set_edgecolor('green')
-            axes[i].patch.set_linewidth(3)
-        else:
-            axes[i].set_frame_on(True)
-            axes[i].patch.set_edgecolor('red')
-            axes[i].patch.set_linewidth(3)
-    
-    plt.suptitle('Non-Robust Model Predictions on Clean Test Images', fontsize=14)
-    plt.tight_layout()
-    plt.savefig('outputs/plots/nonrobust_predictions.png', dpi=150)
-    plt.show()
 
 
 def visualize_non_robust_features(experiment_name='nonrobust_fgsm', num_samples=16):
