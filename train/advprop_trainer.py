@@ -46,12 +46,21 @@ class AdvPropTrainer:
     def generate_adversarial_batch(self, images, labels):
         """Generate adversarial examples using auxiliary BNs"""
         # Important: Use model in eval mode with auxiliary BNs for attack generation
-        #self.model.eval()
+    
+        original_training = self.model.training
+        original_use_aux = getattr(self.model, '_use_aux_bn', False)
+
+        self.model.eval()
         
         # Generate attack using auxiliary BNs
         #with torch.no_grad():
         adv_images = self.attack.attack(images, labels)
-        
+        if original_training:
+            self.model.train()
+        if original_use_aux:
+        # Réactive aux BN si c'était activé
+            pass
+
         return adv_images
     
     def train_epoch(self, train_loader, criterion, optimizer):

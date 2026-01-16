@@ -49,6 +49,11 @@ def parse_args():
                        help='Perturbation strength for adversarial training')
     parser.add_argument('--pgd-iter', type=int, default=7,
                        help='PGD iterations for AdvProp')
+
+    parser.add_argument('--alpha', type=float, default=None,
+                       help='Step size for PGD (default: epsilon/3)')
+    parser.add_argument('--save-name', type=str, default=None,
+                       help='Custom name for saved model')
     
     return parser.parse_args()
 
@@ -111,7 +116,11 @@ def main():
         model_name = args.model
         if args.advprop or args.model == 'resnet18_advprop':
             model_name += "_AdvProp"
-        plot_training_history(history, model_name=model_name)
+        if args.advprop or args.model == 'resnet18_advprop':
+            from utils.visualization import plot_advprop_history
+            plot_advprop_history(history, model_name=model_name)
+        else:
+            plot_training_history(history, model_name=model_name)
         
         # Save final model
         trainer.save_model(f'{model_name}_final.pth')
