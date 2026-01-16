@@ -1,5 +1,5 @@
 timestamp,experiment,dataset,model,accuracy
-<<<<<<< HEAD
+<<<<<<< HEAD,,,,
 20260116_091246,resnet18,clean_test_clean,resnet18,9.444444444444445
 20260116_093701,resnet18,adversarial_test_nonrobust_fgsm,resnet18,10.444444444444445
 20260116_093720,resnet18,clean_test_clean,resnet18,9.444444444444445
@@ -25,6 +25,12 @@ timestamp,experiment,dataset,model,accuracy
 20260116_102908,resnet18,clean_test_clean,resnet18,9.444444444444445
 20260116_102928,resnet18,adversarial_test_random_noise,resnet18,11.0
 20260116_102948,resnet18,clean_test_clean,resnet18,5.37037037037037
-=======
-20260116_175759,resnet18,clean_test_clean,resnet18,98.16666666666667
->>>>>>> b3f4b2adb7cb97cd57aab7979b91c455836a4585
+=======,,,,
+20260116_175759,resnet18,clean_test_clean,resnet18,98.16666666666669
+>>>>>>> b3f4b2adb7cb97cd57aab7979b91c455836a4585,,,,
+20260116_184514,resnet18,clean_test_clean,resnet18,98.16666666666669
+20260116_193728,resnet18,clean_test_clean,resnet18,4.203703703703704
+20260116_210003,resnet18,clean_test_clean,resnet18,12.24074074074074
+20260116_212327,resnet18,clean_test_clean,resnet18,4.12962962962963
+20260116_213430,resnet18,adversarial_train_nonrobust_pgd,resnet18,9.802671896065696
+20260116_225332,resnet18,clean_test_clean,resnet18,9.25925925925926
