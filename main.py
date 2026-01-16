@@ -13,6 +13,8 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from config import *
 from models import create_simple_cnn, ResNet18
 from train.trainer import ModelTrainer, create_data_loaders
+from models.resnet_with_advprop import ResNet18AdvProp
+from train.advprop_trainer import AdvPropTrainer
 from utils.visualization import (
     plot_training_history,
     visualize_predictions,
@@ -27,13 +29,7 @@ def parse_args():
     parser = argparse.ArgumentParser(
         description="EuroSat Adversarial Robustness Project"
     )
-    parser.add_argument(
-        "--model",
-        type=str,
-        default="simple_cnn",
-        choices=["simple_cnn", "resnet18"],
-        help="Model architecture to use",
-    )
+    
     parser.add_argument(
         "--epochs", type=int, default=EPOCHS, help="Number of training epochs"
     )
@@ -46,6 +42,30 @@ def parse_args():
         type=int,
         default=PATIENCE,
         help="Patience for early stopping during training",
+    )
+    parser.add_argument(
+        "--model",
+        type=str,
+        default="simple_cnn",
+        choices=["simple_cnn", "resnet18", "resnet18_advprop"],  # <-- Ajouter advprop
+        help="Model architecture to use",
+    )
+    parser.add_argument(
+        "--advprop",
+        action="store_true",
+        help="Use AdvProp training (requires resnet18_advprop model)",
+    )
+    parser.add_argument(
+        "--epsilon",
+        type=float,
+        default=0.2,  # <-- Votre valeur
+        help="Epsilon for AdvProp adversarial training",
+    )
+    parser.add_argument(
+        "--advprop-iterations",
+        type=int,
+        default=7,
+        help="Number of PGD iterations for AdvProp",
     )
     parser.add_argument(
         "--madry",
@@ -114,6 +134,8 @@ def main():
         model = create_simple_cnn(num_classes=len(class_names))
     elif args.model == "resnet18":
         model = ResNet18(num_classes=len(class_names))
+    elif args.model == "resnet18_advprop":  
+        model = ResNet18AdvProp(num_classes=len(class_names))
 
     print(f"Model parameters: {sum(p.numel() for p in model.parameters()):,}")
 
@@ -122,39 +144,74 @@ def main():
 
     # Train model
     if args.train:
+        if args.advprop:
+            print(f"\nTraining with AdvProp (epsilon={args.epsilon}, epochs={args.epochs})...")
+            # Use AdvProp trainer
+            trainer = AdvPropTrainer(
+                model,
+                epsilon=args.epsilon,
+                alpha=args.epsilon/4,  # Standard ratio
+                iterations=args.advprop_iterations,
+                device=DEVICE
+            )
+            
+            history = trainer.train(
+                train_loader,
+                val_loader,
+                epochs=args.epochs,
+                lr=args.lr,
+                patience=args.patience,
+                save_model_path=args.save_model_path
+            )
+            from utils.visualization import plot_advprop_training_history
+            plot_advprop_training_history(
+                history, 
+                model_name=f"{args.model}_epsilon{args.epsilon}",
+                save_plots_path=args.save_plots_path
+            )
+            # Save final model
+            trainer.save_model(
+                filename=f"{args.model}_advprop_final.pth",
+                save_model_path=args.save_model_path
+            )
+            from utils.visualization import create_advprop_training_report
+            create_advprop_training_report(
+                history=history,
+                model_name=f"{args.model}_epsilon{args.epsilon}",
+                class_names=class_names,
+                save_plots_path=args.save_plots_path,
+                epsilon=args.epsilon
+            )
+        else:
+            madry = None
+            if args.madry is not None:
+                madry = json.loads(args.madry)
 
-        madry = None
-        if args.madry is not None:
-            madry = json.loads(args.madry)
-
-        print(f"\nTraining {args.model} for {args.epochs} epochs...")
-        history = trainer.train(
-            train_loader,
-            val_loader,
-            epochs=args.epochs,
-            lr=args.lr,
-            patience=args.patience,
-            madry=madry,
-            save_model_path=args.save_model_path,
-        )
-
-        # Plot training history
-        plot_training_history(
-            history, model_name=args.model, save_plots_path=args.save_plots_path
-        )
-
+            print(f"\nTraining {args.model} for {args.epochs} epochs...")
+            history = trainer.train(
+                train_loader,
+                val_loader,
+                epochs=args.epochs,
+                lr=args.lr,
+                patience=args.patience,
+                madry=madry,
+                save_model_path=args.save_model_path,
+            )
         # Save final model
-        trainer.save_model(
-            filename=f"{args.model}_final.pth", save_model_path=args.save_model_path
-        )
-
+            trainer.save_model(
+                filename=f"{args.model}_final.pth", save_model_path=args.save_model_path
+                )
+# Plot training history
+            plot_training_history(
+                history, model_name=args.model, save_plots_path=args.save_plots_path
+            )
         # Create comprehensive report
-        create_training_report(
-            history=history,
-            model_name=args.model,
-            class_names=class_names,
-            save_plots_path=args.save_plots_path,
-        )
+            create_training_report(
+                history=history,
+                model_name=args.model,
+                class_names=class_names,
+                save_plots_path=args.save_plots_path,
+            )
 
     # Evaluate model
     if args.evaluate:

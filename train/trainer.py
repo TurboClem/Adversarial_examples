@@ -214,12 +214,12 @@ class ModelTrainer:
         labels = labels.to(self.device)
 
         epsilon = (
-            torch.tensor([epsilon_pixel / s for s in STD])
+            torch.tensor([epsilon_pixel for _ in range(3)])
             .view(1, 3, 1, 1)
             .to(self.device)
         )
         alpha = (
-            torch.tensor([alpha_pixel / s for s in STD])
+            torch.tensor([alpha_pixel for _ in range(3)])
             .view(1, 3, 1, 1)
             .to(self.device)
         )

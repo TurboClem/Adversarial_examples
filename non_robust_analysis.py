@@ -15,6 +15,7 @@ checkpoint = torch.load(model_path, map_location=device)
 baseline_model.load_state_dict(checkpoint['model_state_dict'])
 baseline_model.eval()
 
+epsilon = 0.04
 # %%
 generator = FeatureAnalysisDatasetGenerator(baseline_model, device=device)
 
@@ -26,7 +27,7 @@ for type in ['train', 'test']:
         clean_train_path=f'datasets/EuroSAT_RGB/{type}_clean',
         save_path=non_robust_path,
         attack_type='fgsm',
-        epsilon=0.01,  # Small epsilon
+        epsilon=epsilon,
         mislabel_strategy='random',
         attack_strategy='target',
     )
@@ -39,7 +40,7 @@ for type in ['train', 'test']:
         clean_train_path=f'datasets/EuroSAT_RGB/{type}_clean',
         save_path=non_robust_pgd_path,
         attack_type='pgd',
-        epsilon=0.01,
+        epsilon=epsilon,
         alpha=0.002,
         iterations=3,
         mislabel_strategy='random',
@@ -102,15 +103,21 @@ def evaluate(model_name: str, adv: bool):
 # Train on FGSM non-robust dataset
 model_name = "nonrobust_fgsm"
 train(model_name)
-evaluate(model_name, adv=True)
+#evaluate(model_name, adv=True)
 evaluate(model_name, adv=False)
 
+# %%
+# Train on PGD non-robust dataset
+model_name = "nonrobust_pgd"
+train(model_name)
+#evaluate(model_name, adv=True)
+evaluate(model_name, adv=False)
 
 # %%
 # Train on Random Noise Dataset
 model_name = "random_noise"
 train(model_name)
-evaluate(model_name, adv=True)
+#evaluate(model_name, adv=True)
 evaluate(model_name, adv=False)
 
 # %%
@@ -120,9 +127,9 @@ from utils.result_collector import ResultCollector
 collector = ResultCollector()
 
 experiment_dirs = [
-    ('baseline', 'outputs/models/baseline', 'outputs/plots/baseline_clean'),
-    ('madry_eps001', 'outputs/models/madry_eps001', 'outputs/plots/madry_eps001'),
-    ('madry_eps003', 'outputs/models/madry_eps003', 'outputs/plots/madry_eps003'),
+    #('baseline', 'outputs/models/baseline', 'outputs/plots/baseline_clean'),
+    #('madry_eps001', 'outputs/models/madry_eps001', 'outputs/plots/madry_eps001'),
+    #('madry_eps003', 'outputs/models/madry_eps003', 'outputs/plots/madry_eps003'),
     ('nonrobust_fgsm', 'outputs/models/nonrobust_fgsm', 'outputs/plots/nonrobust_fgsm'),
     ('nonrobust_pgd', 'outputs/models/nonrobust_pgd', 'outputs/plots/nonrobust_pgd'),
     ('random_noise', 'outputs/models/random_noise', 'outputs/plots/random_noise'),

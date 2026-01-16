@@ -2,5 +2,53 @@ data/
 datasets/__pycache__/
 datasets/EuroSAT_RGB/
 
-.pyc
 __pycache__/
+*.pyc
+.ipynb_checkpoints/
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Modèles et données générées
+*.pth
+*.pt
+*.bin
+outputs/plots/
+outputs/models/
+outputs/analysis/
+outputs/evaluation_logs/
+
+# Notebooks temporaires
+.ipynb_checkpoints/
+a.ipynb
+
+# Logs
+*.log
+*.json
+
+# PDFs générés
+*.pdf
+*.png
+
+# Fichiers de cache
+.cache/
+.pytest_cache/
+.mypy_cache/
+
+# Environnements virtuels
+venv/
+env/
+.venv/
+
+# Éditeurs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Système
+.DS_Store
+EOF

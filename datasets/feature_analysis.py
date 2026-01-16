@@ -352,7 +352,7 @@ def create_feature_analysis_summary(results_file='outputs/results/experiment_res
     
     # Plot 3: Adversarial Vulnerability (Accuracy Drop)
     ax = axes[1, 0]
-    bars = ax.bar(df['Dataset'], df['Adv Acc Drop'], 
+    bars = ax.bar(df['Dataset'], abs(df['Adv Acc Drop']), 
                   color=[row['Color'] for _, row in df.iterrows()], alpha=0.8)
     
     # Add value labels
