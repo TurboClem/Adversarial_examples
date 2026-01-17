@@ -1,2 +1,3 @@
 timestamp,experiment,dataset,model,accuracy
-20260116_175759,resnet18,clean_test_clean,resnet18,98.16666666666667
+20260116_175759,resnet18,clean_test_clean,resnet18,98.16666666666669
+20260117_031919,resnet18_advprop,clean_test_clean,resnet18_advprop,95.75925925925925
