@@ -16,7 +16,7 @@ import numpy as np
 
 from models import ResNet18
 
-from attacks.pgd import PGD
+from attacks.pgd import PGD_robust_analysis as PGD
 from attacks.fgsm import FGSM
 from config import DEVICE, STD, MEAN
 
@@ -29,8 +29,17 @@ class FeatureAnalysisDatasetGenerator:
         self.base_model.eval()
         self.device = device
         self.seed = seed
-        torch.manual_seed(seed)  # ← Set PyTorch seed
-        random.seed(seed)  # ← Set Python random seed
+
+        # Store normalization parameters
+        self.mean = torch.tensor(MEAN).view(1, 3, 1, 1).to(device)
+        self.std = torch.tensor(STD).view(1, 3, 1, 1).to(device)
+
+        torch.manual_seed(seed)  # Set PyTorch seed
+        random.seed(seed)  # Set Python random seed
+
+    def denormalize(self, tensor):
+        """Convert normalized tensor back to [0, 1] range"""
+        return tensor * self.std + self.mean
     
     def create_non_robust_dataset(self,
                                  clean_train_path, 
@@ -61,15 +70,15 @@ class FeatureAnalysisDatasetGenerator:
         # Load clean dataset
         dataset = EuroSatDataset(root_dir=clean_train_path, train=True)
         dataloader = DataLoader(dataset, batch_size=32, shuffle=False)
-        
+
         # Prepare attack
         if attack_type.lower() == 'fgsm':
-            attack = FGSM(self.base_model, epsilon=epsilon, device=self.device)
+            attack = FGSM(self.base_model, epsilon=epsilon, device=self.device, targeted=(attack_strategy=='target'))
         elif attack_type.lower() == 'pgd':
-            epsilon_tensor = torch.tensor([epsilon / s for s in STD]).view(1,3,1,1).to(self.device)
-            alpha_tensor = torch.tensor([alpha / s for s in STD]).view(1,3,1,1).to(self.device)
+            epsilon_tensor = torch.tensor([epsilon for _ in range(3)]).view(1,3,1,1).to(self.device)
+            alpha_tensor = torch.tensor([alpha for _ in range(3)]).view(1,3,1,1).to(self.device)
             attack = PGD(self.base_model, epsilon=epsilon_tensor, alpha=alpha_tensor, 
-                        iterations=iterations, device=self.device)
+                        iterations=iterations, device=self.device, targeted=(attack_strategy=='target'))
         else:
             raise ValueError(f"Unknown attack type: {attack_type}")
         

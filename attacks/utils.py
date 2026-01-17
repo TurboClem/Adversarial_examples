@@ -7,6 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from typing import List, Tuple
 
+from config import IMG_SIZE, MEAN, STD, BATCH_SIZE
 
 def denormalize(tensor, mean=None, std=None):
     """
@@ -21,9 +22,9 @@ def denormalize(tensor, mean=None, std=None):
         Denormalized tensor in range [0, 1]
     """
     if mean is None:
-        mean = torch.tensor([0.485, 0.456, 0.406])
+        mean = torch.tensor(MEAN)  # [0.485, 0.456, 0.406])
     if std is None:
-        std = torch.tensor([0.229, 0.224, 0.225])
+        std = torch.tensor(STD)  # [0.229, 0.224, 0.225])
 
     # Reshape for broadcasting
     if tensor.dim() == 4:  # Batch
