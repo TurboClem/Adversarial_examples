@@ -6,7 +6,7 @@ import sys
 import json
 import pandas as pd
 # %%
-# Load the baseline model (your 97.56% accuracy model)
+# Load the baseline model
 model_path = 'outputs/models/baseline/best_model.pth'
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -26,8 +26,9 @@ for type in ['train', 'test']:
         clean_train_path=f'datasets/EuroSAT_RGB/{type}_clean',
         save_path=non_robust_path,
         attack_type='fgsm',
-        epsilon=0.01,  # Small epsilon
-        mislabel_strategy='random'
+        epsilon=0.3,
+        mislabel_strategy='random',
+        attack_strategy='target',
     )
 
 # %%
@@ -38,10 +39,11 @@ for type in ['train', 'test']:
         clean_train_path=f'datasets/EuroSAT_RGB/{type}_clean',
         save_path=non_robust_pgd_path,
         attack_type='pgd',
-        epsilon=0.01,
-        alpha=0.002,
-        iterations=3,
-        mislabel_strategy='random'
+        epsilon=0.3,
+        alpha=0.075,
+        iterations=20,
+        mislabel_strategy='random',
+        attack_strategy='target',
     )
 
 # %%
@@ -51,7 +53,7 @@ for type in ['train', 'test']:
     generator.create_random_noise_dataset(
         clean_train_path=f'datasets/EuroSAT_RGB/{type}_clean',
         save_path=random_noise_path,
-        epsilon=0.01  # Same magnitude as adversarial attacks
+        epsilon=0.3  # Same magnitude as adversarial attacks
     )
 
 # %%
@@ -67,7 +69,7 @@ def train(model_name: str):
         "--epochs", "30",
         "--patience", "10",
         "--lr", "0.001",
-        "--batch-size", "32",
+        "--batch-size", "64",
         "--seed", "42",
         "--data-path-train", f"datasets/EuroSAT_RGB/train_{model_name}",
         "--save-model-path", f"outputs/models/{model_name}",
@@ -95,11 +97,32 @@ def evaluate(model_name: str, adv: bool):
     from main import main
     main()
 
+# %%
+sys.argv = [
+        "main.py",
+        "--model", "resnet18",
+        "--evaluate",
+        "--visualize",
+        "--seed", "42",
+        "--data-path-eval", f'datasets/EuroSAT_RGB/train_nonrobust_pgd',  # f"datasets/EuroSAT_RGB/test_clean",
+        "--save-model-path", 'outputs/models/baseline',  # f"outputs/models/{model_name}",
+        "--save-plots-path", f"outputs/plots/baseline/baseline_test_",
+    ]
+
+from main import main
+main()
 
 # %%
 # Train on FGSM non-robust dataset
 model_name = "nonrobust_fgsm"
-# train(model_name)
+train(model_name)
+evaluate(model_name, adv=True)
+evaluate(model_name, adv=False)
+
+# %%
+# Train on PGD non-robust dataset
+model_name = "nonrobust_pgd"
+train(model_name)
 evaluate(model_name, adv=True)
 evaluate(model_name, adv=False)
 
@@ -107,7 +130,7 @@ evaluate(model_name, adv=False)
 # %%
 # Train on Random Noise Dataset
 model_name = "random_noise"
-# train(model_name)
+train(model_name)
 evaluate(model_name, adv=True)
 evaluate(model_name, adv=False)
 
@@ -119,8 +142,8 @@ collector = ResultCollector()
 
 experiment_dirs = [
     ('baseline', 'outputs/models/baseline', 'outputs/plots/baseline_clean'),
-    ('madry_eps001', 'outputs/models/madry_eps001', 'outputs/plots/madry_eps001'),
-    ('madry_eps003', 'outputs/models/madry_eps003', 'outputs/plots/madry_eps003'),
+    # ('madry_eps001', 'outputs/models/madry_eps001', 'outputs/plots/madry_eps001'),
+    # ('madry_eps003', 'outputs/models/madry_eps003', 'outputs/plots/madry_eps003'),
     ('nonrobust_fgsm', 'outputs/models/nonrobust_fgsm', 'outputs/plots/nonrobust_fgsm'),
     ('nonrobust_pgd', 'outputs/models/nonrobust_pgd', 'outputs/plots/nonrobust_pgd'),
     ('random_noise', 'outputs/models/random_noise', 'outputs/plots/random_noise'),
@@ -162,8 +185,12 @@ print("VISUALIZING NON-ROBUST MODEL PREDICTIONS")
 print("="*80)
 
 # Visualize FGSM non-robust model
-print("\n1. FGSM Non-Robust Model:")
+print("\n0. FGSM Non-Robust Model:")
 fgsm_accuracy = visualize_non_robust_features('nonrobust_fgsm')
+
+# Visualize PGD non-robust model
+print("\n1. PGD Non-Robust Model:")
+fgsm_accuracy = visualize_non_robust_features('nonrobust_pgd')
 
 # Visualize random noise model (for comparison)
 print("\n2. Random Noise Model (Control):")
@@ -191,14 +218,14 @@ def safe_float(value):
 
 # Calculate key metrics
 baseline_acc = safe_float(df_results[df_results['Experiment'] == 'baseline']['Clean Test Acc'].values[0])
-nonrobust_acc = safe_float(df_results[df_results['Experiment'] == 'nonrobust_fgsm']['Clean Test Acc'].values[0])
+nonrobust_acc = safe_float(df_results[df_results['Experiment'] == 'nonrobust_pgd']['Clean Test Acc'].values[0])
 random_acc = safe_float(df_results[df_results['Experiment'] == 'random_noise']['Clean Test Acc'].values[0])
 
 print(baseline_acc, nonrobust_acc, random_acc)
 
 print("\nKey Results:")
 print(f"1_ Baseline (clean training): {baseline_acc}%")
-print(f"2_ Non-Robust Dataset (FGSM): {nonrobust_acc}%")
+print(f"2_ Non-Robust Dataset (PGD): {nonrobust_acc}%")
 print(f"3_ Random Noise Dataset: {random_acc}%")
 print(f"4_ Difference (Non-Robust vs Random): {nonrobust_acc - random_acc}% points")
 

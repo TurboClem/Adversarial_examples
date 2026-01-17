@@ -1,0 +1,7 @@
+Dataset,Train Acc,Clean Test Acc,Adv Test Acc,Adv Acc Drop,Type,Color
+baseline,99.23941798941799,98.17,,,Baseline,#96CEB4
+madry_eps001,62.4537037037037,,,,Adversarial Training,#45B7D1
+madry_eps003,50.72089947089947,,,,Adversarial Training,#45B7D1
+nonrobust_fgsm,28.703703703703702,11.02,31.54,-20.52,Non-Robust,#FF6B6B
+nonrobust_pgd,99.96693121693121,11.11,100.0,-88.89,Non-Robust,#FF6B6B
+random_noise,11.534391534391535,9.02,10.94,-1.92,Random Noise,#4ECDC4

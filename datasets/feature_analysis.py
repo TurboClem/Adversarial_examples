@@ -16,7 +16,7 @@ import numpy as np
 
 from models import ResNet18
 
-from attacks.pgd import PGD
+from attacks.pgd import PGD_robust_analysis as PGD
 from attacks.fgsm import FGSM
 from config import DEVICE, STD, MEAN
 
@@ -29,17 +29,27 @@ class FeatureAnalysisDatasetGenerator:
         self.base_model.eval()
         self.device = device
         self.seed = seed
-        torch.manual_seed(seed)  # ← Set PyTorch seed
-        random.seed(seed)  # ← Set Python random seed
+
+        # Store normalization parameters
+        self.mean = torch.tensor(MEAN).view(1, 3, 1, 1).to(device)
+        self.std = torch.tensor(STD).view(1, 3, 1, 1).to(device)
+
+        torch.manual_seed(seed)  # Set PyTorch seed
+        random.seed(seed)  # Set Python random seed
+
+    def denormalize(self, tensor):
+        """Convert normalized tensor back to [0, 1] range"""
+        return tensor * self.std + self.mean
     
-    def create_non_robust_dataset(self, 
+    def create_non_robust_dataset(self,
                                  clean_train_path, 
                                  save_path,
                                  attack_type='fgsm',
                                  epsilon=0.01,
                                  alpha=0.002,
                                  iterations=5,
-                                 mislabel_strategy='random'):
+                                 mislabel_strategy='random',
+                                 attack_strategy='target'):
         """
         Create a 'non-robust' dataset (experiment 2b from Ilyas et al.)
         
@@ -60,15 +70,15 @@ class FeatureAnalysisDatasetGenerator:
         # Load clean dataset
         dataset = EuroSatDataset(root_dir=clean_train_path, train=True)
         dataloader = DataLoader(dataset, batch_size=32, shuffle=False)
-        
+
         # Prepare attack
         if attack_type.lower() == 'fgsm':
-            attack = FGSM(self.base_model, epsilon=epsilon, device=self.device)
+            attack = FGSM(self.base_model, epsilon=epsilon, device=self.device, targeted=(attack_strategy=='target'))
         elif attack_type.lower() == 'pgd':
-            epsilon_tensor = torch.tensor([epsilon / s for s in STD]).view(1,3,1,1).to(self.device)
-            alpha_tensor = torch.tensor([alpha / s for s in STD]).view(1,3,1,1).to(self.device)
+            epsilon_tensor = torch.tensor([epsilon for _ in range(3)]).view(1,3,1,1).to(self.device)
+            alpha_tensor = torch.tensor([alpha for _ in range(3)]).view(1,3,1,1).to(self.device)
             attack = PGD(self.base_model, epsilon=epsilon_tensor, alpha=alpha_tensor, 
-                        iterations=iterations, device=self.device)
+                        iterations=iterations, device=self.device, targeted=(attack_strategy=='target'))
         else:
             raise ValueError(f"Unknown attack type: {attack_type}")
         
@@ -92,11 +102,10 @@ class FeatureAnalysisDatasetGenerator:
         for batch_idx, (images, true_labels) in enumerate(tqdm(dataloader, desc="Generating non-robust dataset")):
             images = images.to(self.device)
             true_labels = true_labels.to(self.device)
-            
-            # Generate adversarial perturbations
-            with torch.enable_grad():
-                adv_images = attack.attack(images, true_labels)
-            
+
+            # with torch.enable_grad():
+            #    adv_images = attack.attack(images, true_labels, target_labels=None)
+
             # Determine incorrect labels
             if mislabel_strategy == 'random':
                 # Random incorrect labels (different from true label)
@@ -108,8 +117,16 @@ class FeatureAnalysisDatasetGenerator:
                 while mask.any():
                     incorrect_labels[mask] = torch.randint(0, n_classes, (mask.sum(),), device=self.device)
                     mask = (incorrect_labels == true_labels)
-            
+                
+                target_labels = incorrect_labels if attack_strategy == 'target' else None
+
+                # Generate adversarial perturbations
+                with torch.enable_grad():
+                    adv_images = attack.attack(images, true_labels, target_labels=target_labels)
+
             elif mislabel_strategy == 'adversarial':
+                with torch.enable_grad():
+                    adv_images = attack.attack(images, true_labels)
                 # Use model's prediction on adversarial examples as incorrect labels
                 with torch.no_grad():
                     outputs = self.base_model(adv_images)
@@ -344,7 +361,7 @@ def create_feature_analysis_summary(results_file='outputs/results/experiment_res
     
     # Plot 3: Adversarial Vulnerability (Accuracy Drop)
     ax = axes[1, 0]
-    bars = ax.bar(df['Dataset'], df['Adv Acc Drop'], 
+    bars = ax.bar(df['Dataset'], abs(df['Adv Acc Drop']), 
                   color=[row['Color'] for _, row in df.iterrows()], alpha=0.8)
     
     # Add value labels
