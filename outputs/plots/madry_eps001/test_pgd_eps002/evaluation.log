@@ -1,0 +1,6 @@
+Evaluation Results
+==================
+Model: resnet18
+Dataset: datasets/EuroSAT_RGB/test_pgd_eps002
+Test Accuracy: 24.43%
+Total Samples: 5400

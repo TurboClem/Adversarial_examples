@@ -1,0 +1,60 @@
+============================================================
+EVALUATION RESULTS
+============================================================
+Experiment: resnet18
+Model: resnet18
+Dataset: adversarial_test_pgd_eps002
+Path: datasets/EuroSAT_RGB/test_pgd_eps002
+Timestamp: 20260116_231037
+Test Accuracy: 24.43%
+Total Samples: 5400
+
+CLASSIFICATION REPORT
+----------------------------------------
+                      precision    recall  f1-score   support
+
+          AnnualCrop       0.52      0.62      0.56       600
+              Forest       0.00      0.00      0.00       600
+HerbaceousVegetation       0.00      0.00      0.00       600
+             Highway       0.28      0.47      0.35       500
+          Industrial       0.25      0.88      0.39       500
+             Pasture       0.20      0.01      0.01       400
+       PermanentCrop       0.52      0.24      0.33       500
+         Residential       0.04      0.10      0.05       600
+               River       0.26      0.02      0.03       500
+             SeaLake       0.98      0.13      0.23       600
+
+            accuracy                           0.24      5400
+           macro avg       0.30      0.25      0.20      5400
+        weighted avg       0.31      0.24      0.20      5400
+
+
+PER-CLASS ACCURACY
+----------------------------------------
+AnnualCrop                 61.83% (600.0 samples)
+Forest                      0.00% (600.0 samples)
+HerbaceousVegetation        0.00% (600.0 samples)
+Highway                    47.40% (500.0 samples)
+Industrial                 88.20% (500.0 samples)
+Pasture                     0.50% (400.0 samples)
+PermanentCrop              23.80% (500.0 samples)
+Residential                10.17% (600.0 samples)
+River                       1.60% (500.0 samples)
+SeaLake                    13.33% (600.0 samples)
+
+CONFUSION MATRIX SUMMARY
+----------------------------------------
+AnnualCrop                 61.83% (371/600)
+Forest                      0.00% (0/600)
+HerbaceousVegetation        0.00% (0/600)
+Highway                    47.40% (237/500)
+Industrial                 88.20% (441/500)
+Pasture                     0.50% (2/400)
+PermanentCrop              23.80% (119/500)
+Residential                10.17% (61/600)
+River                       1.60% (8/500)
+SeaLake                    13.33% (80/600)
+
+============================================================
+END OF EVALUATION
+============================================================
