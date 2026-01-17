@@ -22,7 +22,7 @@ SEED = 42  # For reproducibility
 MADRY = None
 
 # Model configuration
-MODEL_TYPE = "simple_cnn"  # Options: 'simple_cnn', 'resnet'
+MODEL_TYPE = "simple_cnn"  # Options: 'simple_cnn', 'resnet18', 'resnet18_advprop'
 
 # Paths
 SAVE_MODEL_PATH = "outputs/models/"
