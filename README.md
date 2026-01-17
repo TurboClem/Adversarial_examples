@@ -119,7 +119,7 @@ ls -la data/EuroSAT_RGB/
 # Should show 10 folders: AnnualCrop, Forest, HerbaceousVegetation, etc.
 ```
 
-- Run the notebook *create_datasets.ipynb* to create the reproductible clean train and test sets, train teh baseline model, and create the attacked test set.
+- **Run the notebook ```0_create_datasets_and_baseline.ipynb```** to create the reproductible clean train and test sets, train the baseline model, and create the attacked test set.
 
 ### 3. Run the Project
 
@@ -140,8 +140,8 @@ The file ```1_Ilyas.py``` will :
 The file ```2_Madry.ipynb``` will :
 - ...
 
-#### 3.3 Madry et al. experiment.
-The file ```3_Xie.py``` will :
+#### 3.3 Xie et al. experiment.
+The file ```3_Xie.ipynb``` will :
 - ...
 
 ## How to run a training
