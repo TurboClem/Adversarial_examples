@@ -45,6 +45,30 @@ Adversarial_examples/
     └── plots/                # Training plots
 ```
 
+
+## References
+
+1. **Adversarial Examples Are Not Bugs, They Are Features**  
+   Andrew Ilyas, Shibani Santurkar, Dimitris Tsipras, Logan Engstrom, Brandon Tran, and Aleksander Madry.  
+   In *Advances in Neural Information Processing Systems (NeurIPS)*, 2019.
+
+2. **Towards Deep Learning Models Resistant to Adversarial Attacks**  
+   Aleksander Madry, Aleksandar Makelov, Ludwig Schmidt, Dimitris Tsipras, and Adrian Vladu.  
+   In *International Conference on Learning Representations (ICLR)*, 2018.
+
+3. **Adversarial Examples Improve Image Recognition**  
+   Cihang Xie, Mingxing Tan, Boqing Gong, Jiang Wang, Alan Yuille, and Quoc V. Le.  
+   In *IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)*, 2020.
+
+4. **EuroSAT: A Novel Dataset and Deep Learning Benchmark for Land Use and Land Cover Classification**  
+   Patrick Helber, Benjamin Bischke, Andreas Dengel, Damian Borth.  
+   In *IEEE Journal of Selected Topics in Applied Earth Observations and Remote Sensing*, 2019.
+
+5. **Explaining and harnessing adversarial examples**  
+   Ian J. Goodfellow, Jonathon Shlens, and Christian Szegedy.  
+   In *International Conference on Learning Representations (ICLR)*, 2015.
+
+
 ## 🚀 Initialisation and launching the project
 
 ### 0. Install the libraries
@@ -73,9 +97,25 @@ ls -la data/EuroSAT_RGB/
 ### 3. Run the Project
 
 To follow our framework:
-    - Run the notebook ** to reproduce the experiment on Ilyas et al.
-    - Run the notebook ** to reproduce the experiment on Madry et al.
-    - Run the notebook ** to reproduce the experiment on Xie et al.
+- Run the notebook ```1_Ilyas.py``` to reproduce the experiment on Ilyas et al.
+- Run the notebook ```2_Madry.ipynb``` to reproduce the experiment on Madry et al.
+- Run the notebook ```3_Xie.py``` to reproduce the experiment on Xie et al.
+
+#### 3.1 Ilyas et al. experiment.
+The file ```1_Ilyas.py``` will :
+- load the baseline.
+- generate adversarial sets (using methods : FGSM method, PGD, random noise)
+- train a model on each of adversarial train set.
+- evaluate those models on adversarial test set and clean test set.
+- produce metrics and plots.
+
+#### 3.2 Madry et al. experiment.
+The file ```2_Madry.ipynb``` will :
+- ...
+
+#### 3.3 Madry et al. experiment.
+The file ```3_Xie.py``` will :
+- ...
 
 ## How to run a training
 
