@@ -2,5 +2,5 @@ Evaluation Results
 ==================
 Model: resnet18
 Dataset: datasets/EuroSAT_RGB/test_nonrobust_fgsm
-Test Accuracy: 10.44%
+Test Accuracy: 31.54%
 Total Samples: 5400

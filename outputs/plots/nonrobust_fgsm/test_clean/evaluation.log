@@ -2,5 +2,5 @@ Evaluation Results
 ==================
 Model: resnet18
 Dataset: datasets/EuroSAT_RGB/test_clean
-Test Accuracy: 9.44%
+Test Accuracy: 11.02%
 Total Samples: 5400
