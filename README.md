@@ -138,11 +138,15 @@ The file ```1_Ilyas.py``` will :
 
 #### 3.2 Madry et al. experiment.
 The file ```2_Madry.ipynb``` will :
-- ...
+- train a model with the min-max optimization approach and save the model
+- test on the clean test set and the attacked test set
+- produce metrics and plots
 
 #### 3.3 Xie et al. experiment.
 The file ```3_Xie.ipynb``` will :
-- ...
+- train a model with the approach of Xie et al.
+- test on the clean test set and the attacked test set
+- produce metrics and plots
 
 ## How to run a training
 
