@@ -11,38 +11,46 @@ Adversarial_examples/
 ├── requirements.txt           # Python dependencies
 ├── download_data.sh           # Downloads EuroSat dataset
 ├── README.md                  # This file
-├── data/                      # EuroSat dataset (2 versions)
-│   ├── EuroSAT_RGB/           # RGB version (we use this one)
-│   │   ├── AnnualCrop/
-│   │   ├── Forest/
-│   │   ├── HerbaceousVegetation/
-│   │   ├── Highway/
-│   │   ├── Industrial/
-│   │   ├── Pasture/
-│   │   ├── PermanentCrop/
-│   │   ├── Residential/
-│   │   ├── River/
-│   │   └── SeaLake/
-│   └── EuroSAT_MS/            # Multi-spectral version (ignore for now)
+├── data/EuroSAT_RGB/          # EuroSat dataset when downloaded
+│   ├── AnnualCrop/
+│   ├── Forest/
+│   ├── HerbaceousVegetation/
+│   ├── Highway/
+│   ├── Industrial/
+│   ├── Pasture/
+│   ├── PermanentCrop/
+│   ├── Residential/
+│   ├── River/
+│   └── SeaLake/
 ├── models/                    # Model implementations
 │   ├── __init__.py
 │   ├── simple_cnn.py         # Custom CNN implementation
-│   └── resnet.py             # ResNet implementation
+│   ├── resnet.py             # ResNet implementation
+│   └── resnet_advprop.py     # ResNet Advprop implementation
 ├── data_loader/              # Data handling
 │   ├── __init__.py
 │   └── dataset.py            # EuroSat dataset class
 ├── train/                    # Training utilities
 │   ├── __init__.py
-│   └── trainer.py           # Model trainer class
+│   ├── trainer.py            # Model trainer class
+│   └── advprop_trainer.py    # Model trainer for advprop class
 ├── utils/                    # Helper functions
-│   ├── __init__.py
-│   └── visualization.py     # Plotting utilities
+│   ├── evaluation_logger.py
+│   ├── result_collector.py
+│   ├── utils.py
+│   └── visualization.py      # Plotting utilities
 └── outputs/                  # Generated outputs
-    ├── models/              # Saved model checkpoints
-    └── plots/               # Training plots
+    ├── evaluation_logs/      # Saved evaluation results
+    ├── models/               # Saved model checkpoints
+    └── plots/                # Training plots
 ```
 
-## 🚀 Quick Start
+## 🚀 Initialisation and launching the project
+
+### 0. Install the libraries
+```bash
+pip install -r requirements.txt
+```
 
 ### 1. Load datasets
 ```bash
@@ -50,96 +58,68 @@ Adversarial_examples/
 bash download_data.sh
 ```
 
-### 2. Prepare Dataset
+### 2. Prepare Datasets
 ```bash
 # The dataset should already be in:
 # data/EuroSAT_RGB/ (27000 images, 10 classes)
-# data/EuroSAT_MS/ (multi-spectral version - ignore for now)
 
 # Verify dataset structure
 ls -la data/EuroSAT_RGB/
 # Should show 10 folders: AnnualCrop, Forest, HerbaceousVegetation, etc.
 ```
 
-### 3. Configure the Project
-Edit `config.py` to set the correct data path:
-```python
-# Change this line in config.py
-DATA_PATH = 'data/EuroSAT_RGB'  # Use RGB version
-```
+- Run the notebook *create_datasets.ipynb* to create the reproductible clean train and test sets, train teh baseline model, and create the attacked test set.
 
-### 4. Run the Project
+### 3. Run the Project
 
-#### **Train Simple CNN Model:**
-```bash
-python main.py --model simple_cnn --train --epochs 15
-```
+To follow our framework:
+    - Run the notebook ** to reproduce the experiment on Ilyas et al.
+    - Run the notebook ** to reproduce the experiment on Madry et al.
+    - Run the notebook ** to reproduce the experiment on Xie et al.
 
-#### **Train ResNet18 Model:**
-```bash
-python main.py --model resnet18 --train --epochs 20
-```
+## How to run a training
 
-#### **Evaluate a Trained Model:**
-```bash
-# Evaluate and visualize predictions
-python main.py --model simple_cnn --evaluate --visualize
-```
-
-#### **All Options:**
-```bash
-# Show all available options
-python main.py --help
-
-# Expected output:
-# usage: main.py [-h] [--model {simple_cnn,resnet18}] [--epochs EPOCHS]
-#                [--batch-size BATCH_SIZE] [--lr LR] [--data-path DATA_PATH]
-#                [--train] [--evaluate] [--visualize]
-```
-
-## 📊 Available Commands
+### 📊 Available Commands
 
 | Command | Description | Example |
 |---------|-------------|---------|
 | `--model` | Choose model architecture | `--model simple_cnn` |
+| `--seed` | Seed to reproduce| `--seed 42` |
 | `--epochs` | Number of training epochs | `--epochs 20` |
 | `--batch-size` | Batch size for training | `--batch-size 64` |
 | `--lr` | Learning rate | `--lr 0.0001` |
-| `--data-path` | Path to dataset | `--data-path data/EuroSAT_RGB` |
+| `--patience` | Early stopping | `--patience 10` |
+| `--data-path-train` | Path to train dataset | `--data-path-train datasetsEuroSAT_RGB/train_clean` |
+| `--data-path-eval` | Path to test dataset | `--data-path-eval datasetsEuroSAT_RGB/test_clean` |
 | `--train` | Train the model | `--train` |
 | `--evaluate` | Evaluate on test set | `--evaluate` |
 | `--visualize` | Visualize predictions | `--visualize` |
+| `--save-model-path` | Path to save the model | `--save-model-path outputs/model` |
+| `--save-plots-path` | Path to save plots | `--save-plots-path outputs/plots` |
+| `--advprop` | Use the Advprop procedure during training | `--advprop` |
+| `--epsilon` | Epsilon for PGD during an Advprop training | `--epsilon 0.2` |
+| `--advprop-iterations` | Number of iterations for PGD during an Advprop training | `--advprop-iterations 10` |
+| `--madry` | To use a minmax optimisation training | `--madry None` |
 
-## 💻 Example Workflows
 
-### **Workflow 1: Full Training Pipeline**
+### 💻 Example Workflows
+
+#### **Workflow 1: Full Training Pipeline**
 ```bash
 # Step 1: Train Simple CNN on RGB images
-python main.py --model simple_cnn --train --epochs 15 --data-path data/EuroSAT_RGB
+python main.py --model simple_cnn --train --epochs 15 --data-path-train datasets/EuroSAT_RGB/train_clean
 
 # Step 2: Evaluate and visualize
-python main.py --model simple_cnn --evaluate --visualize
-
-# Step 3: Train ResNet for comparison
-python main.py --model resnet18 --train --epochs 20
+python main.py --model simple_cnn --evaluate --visualize --data-path-eval datasets/EuroSAT_RGB/test_clean --save-model-path outputs/model --save-plots-path outputs/plots
 ```
 
-### **Workflow 2: Quick Evaluation**
+#### **Workflow 2: Quick Evaluation**
 ```bash
 # Just evaluate an existing model
-python main.py --model simple_cnn --evaluate --data-path data/EuroSAT_RGB
+python main.py --model simple_cnn --evaluate --data-path-eval data/EuroSAT_RGB/test_clean --save-plots-path outputs/plots --save-model-path outputs/model
 ```
 
-### **Workflow 3: Compare RGB vs MS (Advanced)**
-```bash
-# Train on RGB version
-python main.py --model simple_cnn --train --epochs 15 --data-path data/EuroSAT_RGB
-
-# Train on MS version (for future multi-spectral analysis)
-python main.py --model simple_cnn --train --epochs 15 --data-path data/EuroSAT_MS
-```
-
-## 🛠️ Configuration
+### 🛠️ Configuration
 Edit `config.py` to modify:
 - Image size (default: 64x64)
 - Batch size (default: 32)
@@ -154,7 +134,7 @@ DATA_PATH = 'data/EuroSAT_RGB'  # For RGB images
 DATA_PATH = 'data/EuroSAT_MS'   # For multi-spectral (advanced)
 ```
 
-## 📈 Outputs
+### 📈 Outputs
 The script automatically creates:
 - **Model checkpoints** in `outputs/models/`
 - **Training plots** in `outputs/plots/`
@@ -169,10 +149,6 @@ The script automatically creates:
 - **Format**: RGB (3 channels)
 - **Classes**: AnnualCrop, Forest, HerbaceousVegetation, Highway, Industrial, Pasture, PermanentCrop, Residential, River, SeaLake
 
-### **EuroSAT_MS (Multi-spectral):**
-- 13 spectral bands
-- More complex, for advanced analysis
-- Use RGB version for your adversarial robustness experiments
 
 ## 🐛 Troubleshooting
 
@@ -203,41 +179,4 @@ cd ~/work/Adversarial_examples
 # Install dependencies
 pip install -r requirements.txt
 ```
-
-## 🧪 Testing Your Setup
-```bash
-# Quick test on SSPCloud
-cd ~/work/Adversarial_examples
-python -c "
-import torch
-print(f'PyTorch: {torch.__version__}')
-print(f'CUDA: {torch.cuda.is_available()}')
-print(f'GPU: {torch.cuda.get_device_name(0) if torch.cuda.is_available() else \"CPU only\"}')
-"
-
-# Test dataset access
-python -c "
-import os
-print(f'Dataset exists: {os.path.exists(\"data/EuroSAT_RGB\")}')
-if os.path.exists('data/EuroSAT_RGB'):
-    classes = os.listdir('data/EuroSAT_RGB')
-    print(f'Found {len(classes)} classes: {classes}')
-"
-```
-
-## 📝 Notes for Your Project
-
-1. **Use RGB version** (`EuroSAT_RGB`) for your initial experiments
-2. **Implement models yourself** as required by your teacher
-3. **Start with SimpleCNN** before moving to ResNet
-4. **SSPCloud persistence**: Your project in `~/work/` will be saved between sessions
-
-## 🔧 For Adversarial Attacks (Next Steps)
-
-After getting basic models working, add:
-1. FGSM attack implementation
-2. PGD attack implementation  
-3. Adversarial training
-4. Robustness evaluation metrics
-
 ---
