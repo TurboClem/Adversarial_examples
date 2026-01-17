@@ -2,47 +2,74 @@
 
 ## 📋 Project Overview
 This project studies adversarial robustness of image classification models on satellite imagery (EuroSat dataset). The goal is to implement and compare different CNN architectures, then analyze their vulnerability to adversarial attacks.
-
 ## 🏗️ Project Structure
 ```
 Adversarial_examples/
-├── main.py                    # Main entry point
-├── config.py                  # Configuration settings
-├── requirements.txt           # Python dependencies
-├── download_data.sh           # Downloads EuroSat dataset
-├── README.md                  # This file
-├── data/EuroSAT_RGB/          # EuroSat dataset when downloaded
-│   ├── AnnualCrop/
-│   ├── Forest/
-│   ├── HerbaceousVegetation/
-│   ├── Highway/
-│   ├── Industrial/
-│   ├── Pasture/
-│   ├── PermanentCrop/
-│   ├── Residential/
-│   ├── River/
-│   └── SeaLake/
-├── models/                    # Model implementations
+├── .gitignore                    # Git ignore rules
+├── requirements.txt              # Python dependencies
+├── pipfreeze.txt                 # Full pip freeze output for reproducibility
+├── config.py                     # Configuration settings (hyperparameters, paths, etc.)
+├── main.py                       # Main entry point for experiments
+├── download_data.sh              # Script to download EuroSat dataset
+├── 0_create_datasets_and_baseline.ipynb    # Creates Train/Test sets and Baseline model
+├── 1_Ilyas.py                    # Runs Ilyas et al. experiment
+├── 2_Madry.ipynb                 # Runs Madry et al. experiment (PGD adversarial training)
+├── 3_Xie.ipynb                   # Runs Xie et al. experiment
+├── README.md                     # Project documentation
+│
+├── attacks/                      # Adversarial attack implementations
 │   ├── __init__.py
-│   ├── simple_cnn.py         # Custom CNN implementation
-│   ├── resnet.py             # ResNet implementation
-│   └── resnet_advprop.py     # ResNet Advprop implementation
-├── data_loader/              # Data handling
+│   ├── base_attack.py            # Base class for all attacks
+│   ├── fgsm.py                   # FGSM attack implementation
+│   ├── pgd.py                    # PGD attack implementation (Madry et al.)
+│   ├── test_attacks.py           # Test scripts for attacks
+│   ├── utils.py                  # Attack-specific utilities
+│   └── configs/                  # Attack configuration files
+│       └── attack_config.json    # JSON configs for different attacks
+│
+├── data_loader/                  # Data handling utilities
 │   ├── __init__.py
-│   └── dataset.py            # EuroSat dataset class
-├── train/                    # Training utilities
+│   └── dataset.py                # EuroSat dataset class and data loaders
+│
+├── datasets/                     # Dataset analysis and preprocessing
+│   ├── EuroSAT_RGB/              # EuroSat split in train/set (result of 0_create_datasets_and_baseline.ipynb)
+│   └── feature_analysis.py       # Feature analysis of datasets
+│
+├── models/                       # Neural network model implementations
 │   ├── __init__.py
-│   ├── trainer.py            # Model trainer class
-│   └── advprop_trainer.py    # Model trainer for advprop class
-├── utils/                    # Helper functions
-│   ├── evaluation_logger.py
-│   ├── result_collector.py
-│   ├── utils.py
-│   └── visualization.py      # Plotting utilities
-└── outputs/                  # Generated outputs
-    ├── evaluation_logs/      # Saved evaluation results
-    ├── models/               # Saved model checkpoints
-    └── plots/                # Training plots
+│   ├── simple_cnn.py             # Custom CNN implementation (baseline)
+│   ├── resnet.py                 # Standard ResNet implementation
+│   └── resnet_with_advprop.py    # ResNet with AdvProp adversarial training
+│
+├── train/                        # Training frameworks
+│   ├── __init__.py
+│   ├── trainer.py                # Standard model trainer
+│   └── advprop_trainer.py        # Trainer for AdvProp adversarial training
+│
+├── utils/                        # Helper functions and utilities
+│   ├── utils.py                  # General utility functions
+│   ├── visualization.py          # Plotting and visualization utilities
+│   ├── evaluation_logger.py      # Logger for evaluation metrics
+│   └── result_collector.py       # Collector for experimental results
+│
+├── outputs/                      # Generated outputs and results
+│   ├── models/                   # Saved model checkpoints
+│   ├── plots/                    # Training/validation plots
+│   ├── evaluation_logs/          # Saved evaluation results
+│   ├── results/                  # Experimental results
+│   └── analysis/                 # Analysis outputs
+│
+└── data/EuroSAT_RGB/             # EuroSat dataset directory (when downloaded)
+    ├── AnnualCrop/
+    ├── Forest/
+    ├── HerbaceousVegetation/
+    ├── Highway/
+    ├── Industrial/
+    ├── Pasture/
+    ├── PermanentCrop/
+    ├── Residential/
+    ├── River/
+    └── SeaLake/
 ```
 
 
