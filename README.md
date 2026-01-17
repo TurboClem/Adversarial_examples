@@ -15,6 +15,7 @@ Adversarial_examples/
 ├── 1_Ilyas.py                    # Runs Ilyas et al. experiment
 ├── 2_Madry.ipynb                 # Runs Madry et al. experiment (PGD adversarial training)
 ├── 3_Xie.ipynb                   # Runs Xie et al. experiment
+├── Report.pdf                    # Project report
 ├── README.md                     # Project documentation
 │
 ├── attacks/                      # Adversarial attack implementations
